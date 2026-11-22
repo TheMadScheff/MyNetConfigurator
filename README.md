@@ -46,8 +46,12 @@ Unter „Preisregeln“ lassen sich die Vorschläge aus der Analyse zuschalten (
 
 „Export (JSON)“ liefert `net-configurator/order@1`: je Position Gaze-Code, Farbcode, Artikelnummer, Maße, Kanten je Seite, Ösenanzahl, Menge, Netto-/Bruttopreise und Gewicht. Alle Schlüssel sind stabile Codes, keine Anzeigetexte.
 
-## Demo veröffentlichen (FTP)
+## Demo veröffentlichen (FTP, lokal)
 
-Der Workflow `.github/workflows/deploy-ftp.yml` testet die Preislogik und lädt den Ordner `app/` per FTP hoch, bei jedem Push auf `main` (Änderungen in `app/`) oder per Hand unter *Actions → Demo per FTP veröffentlichen → Run workflow*.
+Lädt den Ordner `app/` per FTP hoch, z. B. nach https://scheffknecht.net/agroflor/.
 
-Einmalig unter *Settings → Secrets and variables → Actions* anlegen: `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`, `FTP_SERVER_DIR` (z. B. `/agroflor/`). Optional `FTP_PROTOCOL` (`ftps` oder `ftp`, Standard `ftps`) und `FTP_PORT`.
+1. `lftp` installieren (macOS: `brew install lftp`).
+2. `cp .env.deploy.example .env.deploy` und Zugangsdaten eintragen. Die Datei bleibt lokal (`.gitignore`).
+3. Probelauf: `./scripts/deploy-ftp.sh --dry-run`, dann hochladen: `./scripts/deploy-ftp.sh`
+
+In VS Code: *Terminal → Run Task…* → „FTP: Probelauf“ bzw. „FTP: Demo hochladen“. Das Skript führt vorher die Tests aus. Standard ist FTPS; kann der Hoster das nicht, `FTP_PROTOCOL=ftp` setzen. `--delete` entfernt im Zielordner Dateien, die es lokal nicht mehr gibt.

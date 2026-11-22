@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Demo lokal starten", "type": "shell", "command": "python3 -m http.server 8765 --directory app", "isBackground": true, "problemMatcher": [] },
+    { "label": "Tests", "type": "shell", "command": "node --test tests/*.test.js", "group": "test", "problemMatcher": [] },
+    { "label": "FTP: Probelauf", "type": "shell", "command": "./scripts/deploy-ftp.sh --dry-run", "problemMatcher": [] },
+    { "label": "FTP: Demo hochladen", "type": "shell", "command": "./scripts/deploy-ftp.sh", "problemMatcher": [] }
+  ]
+}
