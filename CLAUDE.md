@@ -5,7 +5,8 @@ Produktkonfigurator für Sichtschutz-Gaze und Netze nach Maß (Prototyp, Phase 2
 ## Struktur
 - `app/` – Demo: `index.html`, `app.js` (Bedienung, SVG-Vorschau), `catalog.js` (Produktdaten), `pricing.js` (reine Preis-/Geometrielogik ohne DOM), `styles.css`
 - `tests/pricing.test.js` – prüft die Preislogik gegen gemessene Shop-Preise
-- `docs/` – Analysen, `stilrichtlinien-agroflor.md`
+- `docs/` – Analysen, `stilrichtlinien-agroflor.md`, Umsetzungsanleitungen `anleitung-*.md`
+- `TODO.md` – offene Aufgaben; bei einer Aufgabe mit Anleitung zuerst die verlinkte Datei lesen
 - `scripts/build-artifact.sh` – baut die Online-Vorschau nach `dist/`
 - `scripts/deploy.sh` – FTP-Upload (siehe unten)
 
