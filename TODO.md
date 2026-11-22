@@ -2,7 +2,7 @@
 
 ## Neu
 
-- [ ] **Formen: Trapez und Dreieck** im geführten Konfigurator. Die Schritt-für-Schritt-Anleitung steht in [docs/anleitung-formen.md](docs/anleitung-formen.md).
+- [x] **Formen: Trapez und Dreieck** im geführten Konfigurator, umgesetzt nach [docs/anleitung-formen.md](docs/anleitung-formen.md). Offen bleibt die Klärung mit Agroflor (Abrechnung, Zuschlag, Mindestwinkel und -seitenlänge), siehe unten in der Anleitung.
 
 ## Aus dem Review der Demo (scheffknecht.net/agroflor)
 

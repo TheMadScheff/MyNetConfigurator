@@ -69,10 +69,12 @@
 
     // Konfigurationen
     const TOTALS_H = 44, IMG_W = 95, TX = ML + IMG_W + 6, TW = PW - MR - TX;
+    const COLS = [ML, ML + 42, ML + 68, ML + 112];     // Zuschnitt-Tabelle: Seite, Länge, Kante, Ösen
     data.items.forEach((it, i) => {
       const shot = shots[i];
       const imgH = IMG_W * shot.h / shot.w;
-      const blockH = imgH + 8;
+      const tableH = it.table && it.table.length ? 9 + it.table.length * 4.6 + (it.angles ? 6 : 0) : 0;
+      const blockH = imgH + 8 + tableH;
       // Die letzte Position wandert mit den Summen auf eine neue Seite, damit die Summen nie allein stehen.
       const needed = blockH + (i === data.items.length - 1 ? TOTALS_H : 0);
       if (y + needed > PH - MB) { doc.addPage(); y = MT; }
@@ -90,19 +92,40 @@
       };
       line(it.nr + '. ' + it.title, { bold: true, size: 12, gap: 1.5 });
       line(it.material + ', ' + it.color + (it.sku ? ' (Art.-Nr. ' + it.sku + ')' : ''));
-      line(fmt(it.widthCm, 0) + ' × ' + fmt(it.heightCm, 0) + ' cm · ' + fmt(it.areaM2) + ' m²');
-      line('Menge: ' + it.quantity + ' Stück', { gap: 1.5 });
-      const same = new Set(it.edges.map((e) => e[1])).size === 1;
-      if (same) line('Kanten: rundum ' + it.edges[0][1]);
-      else { line('Kanten:', { gap: 0 }); for (const [side, e] of it.edges) line('   ' + side + ': ' + e, { color: MUTED, gap: 0 }); ty += 0.8; }
-      if (it.eyelets) line('Ösen: ' + it.eyelets);
-      ty += 1.5;
+      line(it.dimsText);
+      line('Fläche: ' + fmt(it.areaM2) + ' m²' + (it.areaNote ? ', berechnet ' + it.areaNote : ''));
+      line('Menge: ' + it.quantity + ' Stück');
+      if (it.eyelets) line('Ösen: ' + it.eyelets + ' je Stück', { gap: 1.5 });
+      ty += 1;
       line('Einzelpreis: ' + eur(it.unitNet) + ' netto · ' + eur(it.unitGross) + ' brutto', { color: MUTED });
+      if (it.shapeSurchargeNet > 0.004) line('davon Formzuschlag: ' + eur(it.shapeSurchargeNet) + ' netto', { color: MUTED });
       line('Summe: ' + eur(it.lineNet) + ' netto', { gap: 0.2 });
       line(eur(it.lineGross) + ' brutto', { bold: true, size: 11 });
 
-      y += Math.max(imgH, ty - y) + 6;
-      if (i < data.items.length - 1) { doc.setDrawColor(...LINE); doc.line(ML, y - 3, PW - MR, y - 3); }
+      y += Math.max(imgH, ty - y) + 3;
+
+      // Zuschnitt: alle Seiten mit Länge, Kante und Ösen, bei Trapez und Dreieck dazu die Winkel
+      if (it.table && it.table.length) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); setText(MUTED);
+        ['Zuschnitt: Seite', 'Länge', 'Kante', 'Ösen'].forEach((h, c) => doc.text(h, COLS[c], y + 3));
+        doc.setDrawColor(...LINE); doc.line(ML, y + 4.6, PW - MR, y + 4.6);
+        y += 9;
+        doc.setFont('helvetica', 'normal'); setText(INK);
+        for (const row of it.table) {
+          doc.text(String(row[0]), COLS[0], y);
+          doc.text(fmt(row[1], Number.isInteger(row[1]) ? 0 : 1) + ' cm', COLS[1], y);
+          doc.text(String(row[2]), COLS[2], y);
+          doc.text(String(row[3]), COLS[3], y);
+          y += 4.6;
+        }
+        if (it.angles) {
+          setText(MUTED);
+          doc.text('Winkel: ' + it.angles.map((a) => fmt(a, 1) + '°').join(' · '), COLS[0], y + 1);
+          y += 6;
+        }
+      }
+      y += 3;
+      if (i < data.items.length - 1) { doc.setDrawColor(...LINE); doc.line(ML, y - 2, PW - MR, y - 2); }
     });
 
     // Summen

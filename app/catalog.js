@@ -129,6 +129,12 @@
     limits: { minWidthCm: 100, minHeightCm: 80, maxWidthCm: 4000, maxHeightCm: 1800 },
 
     /*
+     * Regeln für Trapez und Dreieck (DEMO-WERTE, von Agroflor aus Sicht der Fertigung festzulegen).
+     * Die Maßgrenzen oben gelten für das umschließende Rechteck der Form.
+     */
+    shapeRules: { minAngleDeg: 15, minSideCm: 30, minTopCm: 30, surchargePct: 15 },
+
+    /*
      * Kantenarten wie im heutigen Shop.
      * surchargeNetPerM: Aufpreis je Laufmeter. Heute 0 (Konfektion im m²-Preis enthalten).
      * proposedNetPerM: Vorschlag für ein verursachergerechtes Modell (DEMO-WERTE, vom Kunden festzulegen).
@@ -157,7 +163,7 @@
 
     // Standardwerte für eine neue Position.
     defaults: {
-      material: 'GAZE_203_B1', color: 'SCHWARZ', widthCm: 350, heightCm: 180, quantity: 1,
+      shape: 'RECT', material: 'GAZE_203_B1', color: 'SCHWARZ', widthCm: 350, heightCm: 180, quantity: 1,
       edges: { top: 'OESEN_50', right: 'OESEN_50', bottom: 'OESEN_50', left: 'OESEN_50' },
     },
   };

@@ -9,8 +9,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { header('Allow: POST'); fail
 
 $config = load_config();
 
-$raw = file_get_contents('php://input', false, null, 0, 65537);
-if ($raw === false || strlen($raw) > 65536) fail(413, 'Die Anfrage ist zu groß.');
+$raw = file_get_contents('php://input', false, null, 0, 262145);
+if ($raw === false || strlen($raw) > 262144) fail(413, 'Die Anfrage ist zu groß.');
 $in = json_decode($raw, true);
 if (!is_array($in)) fail(400, 'Ungültige Anfrage.');
 
@@ -34,20 +34,34 @@ $stamp = rate_limit('kontakt', 30);
 
 // Positionen aus dem Konfigurator (optional), nur als Text und mit begrenzter Länge.
 $lines = [];
+$shapeNames = ['RECT' => 'Rechteck', 'TRAPEZ_SYM' => 'Trapez, gleichschenklig', 'TRAPEZ_RECHT' => 'Trapez, eine Seite senkrecht', 'DREIECK_RECHT' => 'Dreieck, rechtwinklig', 'DREIECK_FREI' => 'Dreieck, drei Seiten'];
+$sideNames = ['top' => 'Oben', 'right' => 'Rechts', 'bottom' => 'Unten', 'left' => 'Links'];
 $order = $in['order'] ?? null;
 if (is_array($order) && is_array($order['positions'] ?? null)) {
     foreach (array_slice($order['positions'], 0, 50) as $i => $p) {
         if (!is_array($p)) continue;
         $prod = is_array($p['product'] ?? null) ? $p['product'] : [];
         $dim  = is_array($p['dimensions'] ?? null) ? $p['dimensions'] : [];
-        $edge = is_array($p['edges'] ?? null) ? $p['edges'] : [];
         $pr   = is_array($p['price'] ?? null) ? $p['price'] : [];
         $title = clean($p['name'] ?? '', 60);
         $sku = clean($prod['sku'] ?? '', 40);
         $lines[] = sprintf('%d. %s', $i + 1, $title !== '' ? $title : 'Position');
         $lines[] = sprintf('   %s, %s%s', clean($prod['material'] ?? '', 40), clean($prod['color'] ?? '', 40), $sku !== '' ? ' (Art.-Nr. ' . $sku . ')' : '');
-        $lines[] = sprintf('   %s × %s cm, %d Stück', clean($dim['widthCm'] ?? '', 10), clean($dim['heightCm'] ?? '', 10), (int) ($p['quantity'] ?? 0));
-        $lines[] = sprintf('   Kanten: oben %s, rechts %s, unten %s, links %s', clean($edge['top'] ?? '', 30), clean($edge['right'] ?? '', 30), clean($edge['bottom'] ?? '', 30), clean($edge['left'] ?? '', 30));
+        $shape = clean($p['shape'] ?? 'RECT', 20);
+        $lines[] = '   Form: ' . ($shapeNames[$shape] ?? $shape) . sprintf(', %d Stück', (int) ($p['quantity'] ?? 0));
+        $area = clean($dim['areaM2'] ?? '', 10);
+        $billed = clean($dim['billedAreaM2'] ?? '', 10);
+        $lines[] = sprintf('   Fläche: %s m²%s', str_replace('.', ',', $area), ($billed !== '' && $billed !== $area) ? ', berechnet ' . str_replace('.', ',', $billed) . ' m²' : '');
+        $geoSides = is_array($p['geometry']['sides'] ?? null) ? $p['geometry']['sides'] : [];
+        if ($geoSides) {
+            foreach (array_slice($geoSides, 0, 4) as $gs) {
+                if (!is_array($gs)) continue;
+                $code = clean($gs['side'] ?? '', 10);
+                $lines[] = sprintf('   %s: %s cm, %s', $sideNames[$code] ?? $code, str_replace('.', ',', clean($gs['lengthCm'] ?? '', 10)), clean($gs['edge'] ?? '', 30));
+            }
+        } else {
+            $lines[] = sprintf('   %s × %s cm', clean($dim['widthCm'] ?? '', 10), clean($dim['heightCm'] ?? '', 10));
+        }
         $lines[] = sprintf('   Summe brutto: %s', eur($pr['lineGross'] ?? 0));
         $lines[] = '';
     }

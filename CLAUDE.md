@@ -3,8 +3,8 @@
 Produktkonfigurator für Sichtschutz-Gaze und Netze nach Maß (Prototyp, Phase 2: Ergebnisse in Odoo speichern). Statisch, ohne Build und ohne Abhängigkeiten. Details in `README.md`.
 
 ## Struktur
-- `app/` – Demo: `index.html`, `app.js` (Bedienung, SVG-Vorschau), `catalog.js` (Produktdaten), `pricing.js` (reine Preis-/Geometrielogik ohne DOM), `styles.css`
-- `tests/pricing.test.js` – prüft die Preislogik gegen gemessene Shop-Preise
+- `app/` – Demo: `index.html`, `app.js` (Bedienung, SVG-Vorschau), `catalog.js` (Produktdaten), `pricing.js` (reine Preislogik ohne DOM), `geometry.js` (Formen: Rechteck, Trapez, Dreieck, reine Funktionen), `styles.css`
+- `tests/pricing.test.js` – prüft die Preislogik gegen gemessene Shop-Preise; `tests/geometry.test.js` – Formen, Ösen, Formzuschlag, Export
 - `docs/` – Analysen, `stilrichtlinien-agroflor.md`, Umsetzungsanleitungen `anleitung-*.md`
 - `TODO.md` – offene Aufgaben; bei einer Aufgabe mit Anleitung zuerst die verlinkte Datei lesen
 - `scripts/build-artifact.sh` – baut die Online-Vorschau nach `dist/`
@@ -20,6 +20,13 @@ Produktkonfigurator für Sichtschutz-Gaze und Netze nach Maß (Prototyp, Phase 2
 - Upload überschreibt gleichnamige Dateien und löscht nichts. Vor `--go` Probelauf zeigen und bestätigen lassen.
 - Passwörter liegen im macOS-Schlüsselbund. Nie selbst auslesen oder in Dateien schreiben. Fehlt ein Profil, `~/.claude/skills/ftp-upload/scripts/setup.sh` vom Benutzer in einem eigenen Terminal ausführen lassen.
 - Das ältere `scripts/deploy-ftp.sh` (lftp, Passwort in `.env.deploy`) bleibt vorerst bestehen, wird aber nicht benutzt.
+
+## Formen
+- Fünf Formen (`geometry.js`, `SHAPES`): `RECT`, `TRAPEZ_SYM`, `TRAPEZ_RECHT`, `DREIECK_RECHT`, `DREIECK_FREI`. Positionen ohne `shape` gelten als `RECT`; ein Rechteck rechnet exakt wie vorher.
+- Seitencodes bleiben `top/right/bottom/left`, beim Dreieck entfällt `top`. Seite i läuft von Ecke i zu Ecke i+1 (Uhrzeigersinn ab links oben, y nach unten).
+- Preisregel `shapePricing` (Bereich „Preisregeln“): `area`, `area_surcharge` (Standard, Demo-Zuschlag 15 % in `catalog.shapeRules`), `bbox`. Die Staffel richtet sich nach der berechneten Fläche, das Gewicht nach der echten.
+- Regeln in `catalog.shapeRules`: Mindestwinkel 15°, Mindestseite 30 cm, Mindest-Oberkante 30 cm (Demo-Werte). Die Maßgrenzen `catalog.limits` gelten für das umschließende Rechteck.
+- Export-Schema `net-configurator/order@2` mit `shape`, `geometry.vertices` und `geometry.sides`.
 
 ## PDF-Export
 - Button „Als PDF exportieren“ (ersetzt JSON-Export/-Import) → `app/pdf.js` (`NetPdf.create`) mit jsPDF 4.2.1 aus `app/vendor/` (MIT, ohne CDN).

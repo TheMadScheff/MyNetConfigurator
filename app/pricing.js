@@ -4,7 +4,8 @@
  * (z. B. als Python-Port in einem Odoo-Modul) identisch rechnen.
  *
  * Preisformel je Stück (netto):
- *   fläche_m2      = breite_cm × höhe_cm / 10 000
+ *   fläche_m2      = Fläche der Form (Rechteck: breite_cm × höhe_cm / 10 000; Trapez/Dreieck: Polygonfläche)
+ *   berechnete Fläche = bei Trapez/Dreieck je nach Regel shapePricing: echte Fläche, mit Zuschlag oder umschließendes Rechteck
  *   m2_preis       = Staffelpreis(material, staffelfläche)   // staffelfläche = Stückfläche oder Auftragsfläche
  *   kanten         = Σ kantenlänge_m × aufpreis_lfm(kantenart)
  *   zubehör        = Ösen × Kabelbinder (optional)
@@ -13,12 +14,14 @@
  *   position       = stück_brutto × menge
  */
 (function (root) {
+  const G = typeof module !== 'undefined' && module.exports ? require('./geometry.js') : root.NetGeometry;
   const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
   const DEFAULT_RULES = {
     tierBasis: 'piece',        // 'piece' = wie heute (Staffel je Stückfläche), 'order' = Summe gleicher Gaze im Auftrag
     edgePricing: 'included',   // 'included' = wie heute (Kante im m²-Preis), 'proposed' = Aufpreis je lfm
     accessories: false,        // Kabelbinder je Öse vorschlagen
+    shapePricing: 'area_surcharge', // Trapez/Dreieck: 'area' = echte Fläche, 'area_surcharge' = + Zuschlag (shapeRules.surchargePct), 'bbox' = umschließendes Rechteck
   };
 
   function findMaterial(cat, code) {
@@ -29,33 +32,84 @@
     return cat.edges.find((e) => e.code === code) || null;
   }
 
+  /** Seitenlänge eines Rechtecks. Für andere Formen: shapeGeometry(pos).sides. */
   function sideLengthCm(pos, side) {
     return side === 'top' || side === 'bottom' ? pos.widthCm : pos.heightCm;
   }
 
+  /** Echte Fläche der Form in m² (NaN bei ungültigen Maßen, wie bisher beim Rechteck). */
   function areaM2(pos) {
-    return (pos.widthCm * pos.heightCm) / 10000;
+    if (!pos.shape || pos.shape === 'RECT') return (pos.widthCm * pos.heightCm) / 10000;
+    const g = G.shapeGeometry(pos);
+    return g.error ? NaN : g.areaM2;
+  }
+
+  /** Berechnete Fläche: Rechteck = echte Fläche, Trapez/Dreieck nach Regel shapePricing. */
+  function billedAreaM2(cat, pos, rules) {
+    const area = areaM2(pos);
+    if (!pos.shape || pos.shape === 'RECT') return area;
+    const mode = Object.assign({}, DEFAULT_RULES, rules || {}).shapePricing;
+    if (mode === 'bbox') {
+      const g = G.shapeGeometry(pos);
+      return g.error ? NaN : (g.bboxWidthCm * g.bboxHeightCm) / 10000;
+    }
+    if (mode === 'area') return area;
+    return area * (1 + cat.shapeRules.surchargePct / 100);
   }
 
   /** Prüft eine Position. Liefert eine Liste {field, message}. */
   function validate(cat, pos) {
     const errors = [];
     const L = cat.limits;
+    const code = G.shapeCode(pos);
+    const shape = G.findShape(code);
     const mat = findMaterial(cat, pos.material);
     if (!mat) errors.push({ field: 'material', message: 'Bitte eine Gaze wählen.' });
     if (mat && !mat.colors.some((c) => c.code === pos.color)) {
       errors.push({ field: 'color', message: 'Diese Farbe gibt es für ' + mat.name + ' nicht.' });
     }
     const intOk = (v) => Number.isFinite(v) && Math.round(v) === v;
-    if (!intOk(pos.widthCm)) errors.push({ field: 'widthCm', message: 'Breite bitte in ganzen Zentimetern angeben.' });
-    else if (pos.widthCm < L.minWidthCm) errors.push({ field: 'widthCm', message: 'Mindestens ' + L.minWidthCm + ' cm breit.' });
-    else if (pos.widthCm > L.maxWidthCm) errors.push({ field: 'widthCm', message: 'Höchstens ' + L.maxWidthCm + ' cm breit.' });
-    if (!intOk(pos.heightCm)) errors.push({ field: 'heightCm', message: 'Höhe bitte in ganzen Zentimetern angeben.' });
-    else if (pos.heightCm < L.minHeightCm) errors.push({ field: 'heightCm', message: 'Mindestens ' + L.minHeightCm + ' cm hoch.' });
-    else if (pos.heightCm > L.maxHeightCm) errors.push({ field: 'heightCm', message: 'Höchstens ' + L.maxHeightCm + ' cm hoch.' });
+    if (!shape) {
+      errors.push({ field: 'shape', message: 'Bitte eine Form wählen.' });
+    } else if (code === 'RECT') {
+      if (!intOk(pos.widthCm)) errors.push({ field: 'widthCm', message: 'Breite bitte in ganzen Zentimetern angeben.' });
+      else if (pos.widthCm < L.minWidthCm) errors.push({ field: 'widthCm', message: 'Mindestens ' + L.minWidthCm + ' cm breit.' });
+      else if (pos.widthCm > L.maxWidthCm) errors.push({ field: 'widthCm', message: 'Höchstens ' + L.maxWidthCm + ' cm breit.' });
+      if (!intOk(pos.heightCm)) errors.push({ field: 'heightCm', message: 'Höhe bitte in ganzen Zentimetern angeben.' });
+      else if (pos.heightCm < L.minHeightCm) errors.push({ field: 'heightCm', message: 'Mindestens ' + L.minHeightCm + ' cm hoch.' });
+      else if (pos.heightCm > L.maxHeightCm) errors.push({ field: 'heightCm', message: 'Höchstens ' + L.maxHeightCm + ' cm hoch.' });
+    } else {
+      const names = { widthCm: 'Unterkante', topCm: 'Oberkante', heightCm: 'Höhe', sideLeftCm: 'Linke Seite', sideRightCm: 'Rechte Seite' };
+      let inputsOk = true;
+      for (const f of shape.inputs.filter((k) => names[k])) {
+        if (!intOk(pos[f]) || pos[f] < 1) { errors.push({ field: f, message: names[f] + ' bitte in ganzen Zentimetern angeben.' }); inputsOk = false; }
+      }
+      if (inputsOk) {
+        const g = G.shapeGeometry(pos);
+        const R = cat.shapeRules;
+        if (g.error === 'triangle') {
+          errors.push({ field: 'shape', message: 'Diese drei Seiten ergeben kein Dreieck. Die längste Seite muss kürzer sein als die beiden anderen zusammen.' });
+        } else if (g.error) {
+          errors.push({ field: 'shape', message: 'Bitte die Maße prüfen.' });
+        } else {
+          const isTrapez = code.startsWith('TRAPEZ');
+          if (isTrapez && pos.topCm < R.minTopCm) errors.push({ field: 'topCm', message: 'Für eine Spitze bitte Dreieck wählen.' });
+          if (g.sides.some((s) => s.lengthExactCm < R.minSideCm)) errors.push({ field: 'shape', message: 'Jede Seite muss mindestens ' + R.minSideCm + ' cm lang sein.' });
+          if (g.anglesDeg.some((a) => a < R.minAngleDeg)) errors.push({ field: 'shape', message: 'Die Spitze wird zu schmal (unter ' + R.minAngleDeg + '°). Bitte Maße anpassen.' });
+          // Grenzen gelten für das umschließende Rechteck
+          const wField = isTrapez && pos.topCm > pos.widthCm ? 'topCm' : 'widthCm';
+          const hField = shape.inputs.includes('heightCm') ? 'heightCm' : 'shape';
+          const bw = Math.round(g.bboxWidthCm * 10) / 10, bh = Math.round(g.bboxHeightCm * 10) / 10;
+          if (bw < L.minWidthCm) errors.push({ field: wField, message: 'Die Form ist mindestens ' + L.minWidthCm + ' cm breit.' });
+          else if (bw > L.maxWidthCm) errors.push({ field: wField, message: 'Die Form ist höchstens ' + L.maxWidthCm + ' cm breit.' });
+          if (bh < L.minHeightCm) errors.push({ field: hField, message: 'Die Form ist mindestens ' + L.minHeightCm + ' cm hoch.' });
+          else if (bh > L.maxHeightCm) errors.push({ field: hField, message: 'Die Form ist höchstens ' + L.maxHeightCm + ' cm hoch.' });
+        }
+      }
+    }
     if (!intOk(pos.quantity) || pos.quantity < 1) errors.push({ field: 'quantity', message: 'Mindestens 1 Stück.' });
     else if (pos.quantity > 999) errors.push({ field: 'quantity', message: 'Höchstens 999 Stück je Position.' });
-    for (const s of cat.sides) {
+    for (const s of cat.sides.filter((x) => !shape || shape.sides.includes(x.code))) {
       if (!findEdge(cat, pos.edges && pos.edges[s.code])) {
         errors.push({ field: 'edge_' + s.code, message: 'Bitte Kante ' + s.label + ' wählen.' });
       }
@@ -64,40 +118,38 @@
   }
 
   /**
-   * Ösenpositionen in cm (Ursprung oben links). Ecken werden geöst, wenn eine der beiden
+   * Ösenpositionen in cm (Ursprung oben links) für jede Form. Ecken werden geöst, wenn eine der beiden
    * angrenzenden Kanten Ösen hat. „ca. alle 50 cm“ = gleichmäßig verteilt, Abstand ≤ 50 cm.
+   * Jeder Punkt kennt seine Seiten (`sides`), damit die Vorschau ihn nach innen versetzen kann.
    */
   function eyelets(cat, pos) {
-    const W = pos.widthCm, H = pos.heightCm;
+    const g = G.shapeGeometry(pos);
+    const points = [];
+    const spacingBySide = {};
+    const interiorBySide = {};
+    if (g.error) return { points, count: 0, spacingBySide, interiorBySide };
     const has = (side) => {
       const e = findEdge(cat, pos.edges[side]);
       return e && e.eyelets !== 'none';
     };
-    const points = [];
-    const spacingBySide = {};
-    const corners = [
-      { x: 0, y: 0, sides: ['top', 'left'] },
-      { x: W, y: 0, sides: ['top', 'right'] },
-      { x: W, y: H, sides: ['bottom', 'right'] },
-      { x: 0, y: H, sides: ['bottom', 'left'] },
-    ];
-    for (const c of corners) if (c.sides.some(has)) points.push({ x: c.x, y: c.y, corner: true });
-
-    const lines = {
-      top: (t) => ({ x: t * W, y: 0 }),
-      bottom: (t) => ({ x: t * W, y: H }),
-      left: (t) => ({ x: 0, y: t * H }),
-      right: (t) => ({ x: W, y: t * H }),
-    };
-    for (const side of Object.keys(lines)) {
-      const e = findEdge(cat, pos.edges[side]);
+    const n = g.vertices.length;
+    g.vertices.forEach((v, i) => {
+      const sides = [g.sides[(i - 1 + n) % n].code, g.sides[i].code];
+      if (sides.some(has)) points.push({ x: v.x, y: v.y, corner: true, sides });
+    });
+    for (const s of g.sides) {
+      const e = findEdge(cat, pos.edges[s.code]);
       if (!e || e.eyelets !== 'spaced') continue;
-      const L = sideLengthCm(pos, side);
-      const segments = Math.max(1, Math.ceil(L / e.eyeletSpacingCm));
-      spacingBySide[side] = L / segments;
-      for (let i = 1; i < segments; i++) points.push(Object.assign(lines[side](i / segments), { corner: false }));
+      const L = s.lengthExactCm;
+      const segments = Math.max(1, Math.ceil(L / e.eyeletSpacingCm - 1e-9));
+      spacingBySide[s.code] = L / segments;
+      interiorBySide[s.code] = segments - 1;
+      for (let i = 1; i < segments; i++) {
+        const t = i / segments;
+        points.push({ x: s.from.x + (s.to.x - s.from.x) * t, y: s.from.y + (s.to.y - s.from.y) * t, corner: false, sides: [s.code] });
+      }
     }
-    return { points, count: points.length, spacingBySide };
+    return { points, count: points.length, spacingBySide, interiorBySide };
   }
 
   /** Staffelstufe für eine Fläche, plus nächste Stufe (oder null). */
@@ -116,14 +168,17 @@
   function pricePosition(cat, pos, rules, tierAreaM2) {
     rules = Object.assign({}, DEFAULT_RULES, rules || {});
     const mat = findMaterial(cat, pos.material);
-    const area = areaM2(pos);
-    const tierArea = tierAreaM2 != null ? tierAreaM2 : area;
+    const geo = G.shapeGeometry(pos);
+    const area = areaM2(pos);                       // echte Fläche der Form
+    const billed = billedAreaM2(cat, pos, rules);   // berechnete Fläche (bei Trapez/Dreieck evtl. mit Zuschlag)
+    const tierArea = tierAreaM2 != null ? tierAreaM2 : billed;
     const t = tierFor(mat, tierArea);
-    const materialNet = area * t.tier.netPerM2;
+    const materialNet = billed * t.tier.netPerM2;
+    const shapeSurchargeNet = (billed - area) * t.tier.netPerM2;
 
-    const edgeLines = cat.sides.map((s) => {
+    const edgeLines = geo.sides.map((s) => {
       const e = findEdge(cat, pos.edges[s.code]);
-      const lengthM = sideLengthCm(pos, s.code) / 100;
+      const lengthM = s.lengthExactCm / 100;
       const rate = rules.edgePricing === 'proposed' ? e.proposedNetPerM : e.surchargeNetPerM;
       return { side: s.code, edge: e.code, lengthM, rateNetPerM: rate, net: lengthM * rate };
     });
@@ -148,6 +203,10 @@
 
     return {
       areaM2: area,
+      shapeAreaM2: area,
+      billedAreaM2: billed,
+      shapeSurchargeNet,
+      geometry: geo,
       tierAreaM2: tierArea,
       tier: t.tier,
       tierIndex: t.index,
@@ -175,7 +234,7 @@
     rules = Object.assign({}, DEFAULT_RULES, rules || {});
     const valid = positions.filter((p) => validate(cat, p).length === 0);
     const areaByMaterial = {};
-    for (const p of valid) areaByMaterial[p.material] = (areaByMaterial[p.material] || 0) + areaM2(p) * p.quantity;
+    for (const p of valid) areaByMaterial[p.material] = (areaByMaterial[p.material] || 0) + billedAreaM2(cat, p, rules) * p.quantity;
     const lines = valid.map((p) => ({
       position: p,
       price: pricePosition(cat, p, rules, rules.tierBasis === 'order' ? areaByMaterial[p.material] : null),
@@ -193,11 +252,23 @@
     };
   }
 
+  /** Eingabemaße der Form plus Flächen und umschließendes Rechteck für den Export. */
+  function dimensionsOf(p, r) {
+    const shape = G.findShape(G.shapeCode(p));
+    const d = {};
+    for (const k of shape.inputs) d[k] = p[k] === undefined ? null : p[k];
+    d.areaM2 = round2(r.shapeAreaM2);
+    d.billedAreaM2 = round2(r.billedAreaM2);
+    d.bboxWidthCm = Math.round(r.geometry.bboxWidthCm * 10) / 10;
+    d.bboxHeightCm = Math.round(r.geometry.bboxHeightCm * 10) / 10;
+    return d;
+  }
+
   /** Export-Struktur für Phase 2 (Odoo). Nur Codes und Zahlen, keine Anzeigetexte als Schlüssel. */
   function exportOrder(cat, positions, rules) {
     const order = priceOrder(cat, positions, rules);
     return {
-      schema: 'net-configurator/order@1',
+      schema: 'net-configurator/order@2',
       createdAt: new Date().toISOString(),
       currency: cat.currency,
       vatRate: cat.vatRate,
@@ -209,8 +280,13 @@
           line: i + 1,
           name: p.name || null,
           product: { material: p.material, color: p.color, sku: color ? color.sku : null },
-          dimensions: { widthCm: p.widthCm, heightCm: p.heightCm, areaM2: round2(r.areaM2) },
-          edges: Object.assign({}, p.edges),
+          shape: G.shapeCode(p),
+          dimensions: dimensionsOf(p, r),
+          geometry: {
+            vertices: r.geometry.vertices.map((v) => [round2(v.x), round2(v.y)]),
+            sides: r.geometry.sides.map((s) => ({ side: s.code, lengthCm: s.lengthCm, edge: p.edges[s.code] })),
+          },
+          edges: Object.fromEntries(r.geometry.sides.map((s) => [s.code, p.edges[s.code]])),
           eyelets: r.eyeletCount,
           accessories: r.accessoryLines.map((a) => ({ code: a.code, quantity: a.quantity })),
           quantity: p.quantity,
@@ -228,7 +304,7 @@
     };
   }
 
-  const api = { DEFAULT_RULES, round2, findMaterial, findEdge, areaM2, sideLengthCm, validate, eyelets, tierFor, grossPerM2, pricePosition, priceOrder, exportOrder };
+  const api = { DEFAULT_RULES, round2, findMaterial, findEdge, areaM2, billedAreaM2, sideLengthCm, validate, eyelets, tierFor, grossPerM2, pricePosition, priceOrder, exportOrder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.NetPricing = api;
 })(typeof window !== 'undefined' ? window : globalThis);

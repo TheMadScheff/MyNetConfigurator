@@ -26,6 +26,11 @@
   <section class="config" aria-label="Konfiguration">
     <form id="config-form" novalidate>
       <fieldset class="step">
+        <legend class="step__title">Form <span id="shape-name" class="step__value"></span></legend>
+        <div id="shapes" class="shapes" role="radiogroup" aria-label="Form"></div>
+      </fieldset>
+
+      <fieldset class="step">
         <legend class="step__title">Gewebe</legend>
         <div id="materials" class="materials" role="radiogroup" aria-label="Gewebe"></div>
       </fieldset>
@@ -37,21 +42,42 @@
 
       <fieldset class="step">
         <legend class="step__title">Maße</legend>
-        <div class="dims">
+        <div class="dims" id="dims">
           <label class="field" for="width">
-            <span class="field__label">Breite</span>
+            <span class="field__label" id="width-label">Breite</span>
             <span class="field__control"><input id="width" name="widthCm" type="number" inputmode="numeric" min="100" max="4000" step="1"><span class="unit">cm</span></span>
             <span class="field__error" id="width-error"></span>
           </label>
-          <span class="dims__x" aria-hidden="true">×</span>
-          <label class="field" for="height">
+          <span class="dims__x" id="dims-x" aria-hidden="true">×</span>
+          <label class="field" for="top" id="f-top" hidden>
+            <span class="field__label">Oberkante</span>
+            <span class="field__control"><input id="top" name="topCm" type="number" inputmode="numeric" min="30" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="top-error"></span>
+          </label>
+          <label class="field" for="height" id="f-height">
             <span class="field__label">Höhe</span>
             <span class="field__control"><input id="height" name="heightCm" type="number" inputmode="numeric" min="80" max="1800" step="1"><span class="unit">cm</span></span>
             <span class="field__error" id="height-error"></span>
           </label>
+          <label class="field" for="side-left" id="f-side-left" hidden>
+            <span class="field__label">Linke Seite</span>
+            <span class="field__control"><input id="side-left" name="sideLeftCm" type="number" inputmode="numeric" min="30" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="side-left-error"></span>
+          </label>
+          <label class="field" for="side-right" id="f-side-right" hidden>
+            <span class="field__label">Rechte Seite</span>
+            <span class="field__control"><input id="side-right" name="sideRightCm" type="number" inputmode="numeric" min="30" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="side-right-error"></span>
+          </label>
         </div>
+        <div class="orient" id="orient" role="radiogroup" aria-labelledby="orient-label" hidden>
+          <span class="field__label" id="orient-label">Schräge Seite</span>
+          <button type="button" class="chip" role="radio" data-orient="left" aria-checked="false">links</button>
+          <button type="button" class="chip" role="radio" data-orient="right" aria-checked="false">rechts</button>
+        </div>
+        <p class="field__error" id="shape-error" role="alert"></p>
         <p class="hint" id="limits-hint"></p>
-        <div class="presets" aria-label="Häufige Maße">
+        <div class="presets" id="presets" aria-label="Häufige Maße">
           <button type="button" class="chip" data-w="341" data-h="176">Bauzaunfeld 341 × 176</button>
           <button type="button" class="chip" data-w="250" data-h="180">Zaunfeld 250 × 180</button>
           <button type="button" class="chip" data-w="600" data-h="120">Bühnenblende 600 × 120</button>
@@ -130,6 +156,12 @@
           <label><input type="radio" name="edgePricing" value="proposed" id="edge-proposed"> Aufpreis je Laufmeter <span class="tag tag--new">Vorschlag, Demo-Werte</span></label>
         </fieldset>
         <fieldset class="rules__group">
+          <legend>Trapez und Dreieck: berechnete Fläche</legend>
+          <label><input type="radio" name="shapePricing" value="area" id="shape-area"> nur die echte Fläche der Form</label>
+          <label><input type="radio" name="shapePricing" value="area_surcharge" id="shape-surcharge"> echte Fläche plus Zuschlag für den Zuschnitt <span class="tag tag--new">Vorschlag, Demo-Wert <span id="shape-pct"></span> %</span></label>
+          <label><input type="radio" name="shapePricing" value="bbox" id="shape-bbox"> umschließendes Rechteck (inkl. Verschnitt)</label>
+        </fieldset>
+        <fieldset class="rules__group">
           <legend>Zubehör</legend>
           <label><input type="checkbox" name="accessories" id="acc"> Kabelbinder (1 je Öse) mitbestellen <span class="tag tag--new">Demo-Preis</span></label>
         </fieldset>
@@ -180,6 +212,7 @@
 </div>
 
 <script src="vendor/jspdf.umd.min.js"></script>
+<script src="geometry.js"></script>
 <script src="catalog.js"></script>
 <script src="pricing.js"></script>
 <script src="pdf.js"></script>

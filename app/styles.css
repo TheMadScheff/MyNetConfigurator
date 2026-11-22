@@ -36,6 +36,7 @@
 :root, :root[data-theme="dark"] { color-scheme: light; }
 
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
   background: var(--bg);
@@ -315,3 +316,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .check a { color: var(--accent); }
 .contact__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
 .contact__actions .btn:disabled { opacity: .55; cursor: wait; }
+
+/* Formwahl und Maße je Form */
+.shapes { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: .5rem; }
+.shape {
+  display: grid; gap: .3rem; justify-items: center; text-align: center; cursor: pointer;
+  padding: .55rem .4rem; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2);
+  font: 500 .78rem/1.2 var(--font-body); color: var(--ink);
+}
+.shape:hover { border-color: var(--muted); }
+.shape[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--surface); }
+.shape svg { width: 56px; height: 40px; display: block; }
+.shape__icon { fill: var(--accent-soft); stroke: var(--accent-strong); stroke-width: 1.5; stroke-linejoin: round; }
+.orient { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .6rem; }
+.orient .field__label { margin-right: .25rem; }
+.chip[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
+#shape-error:empty { display: none; }
+.dimline.is-hi { stroke: var(--accent); stroke-width: 2; }
+.dimtext.is-hi { fill: var(--accent-strong); }
