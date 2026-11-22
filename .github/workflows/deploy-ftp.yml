@@ -1,0 +1,58 @@
+# Testet die Preislogik und lädt die Demo per FTP hoch (Ziel z. B. scheffknecht.net/agroflor).
+# Benötigte Repository-Secrets (Settings → Secrets and variables → Actions):
+#   FTP_SERVER      z. B. ftp.scheffknecht.net
+#   FTP_USERNAME    FTP-Benutzer
+#   FTP_PASSWORD    FTP-Passwort
+#   FTP_SERVER_DIR  Zielordner auf dem Server, mit / am Ende, z. B. /agroflor/ oder /public_html/agroflor/
+# Optional: FTP_PROTOCOL (ftps oder ftp, Standard ftps) und FTP_PORT (Standard 21).
+name: Demo per FTP veröffentlichen
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', '.github/workflows/deploy-ftp.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ftp
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Preislogik testen
+        run: node --test tests/*.test.js
+
+      - name: Zugangsdaten prüfen
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SERVER_DIR: ${{ secrets.FTP_SERVER_DIR }}
+        run: |
+          missing=""
+          for v in FTP_SERVER FTP_USERNAME FTP_PASSWORD FTP_SERVER_DIR; do
+            [ -n "$(printenv $v)" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Fehlende Secrets:$missing"
+            exit 1
+          fi
+
+      - name: Hochladen
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ secrets.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ secrets.FTP_PORT || 21 }}
+          local-dir: ./app/
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}

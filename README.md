@@ -45,3 +45,9 @@ Unter „Preisregeln“ lassen sich die Vorschläge aus der Analyse zuschalten (
 ## Export (Übergabe an Odoo, Phase 2)
 
 „Export (JSON)“ liefert `net-configurator/order@1`: je Position Gaze-Code, Farbcode, Artikelnummer, Maße, Kanten je Seite, Ösenanzahl, Menge, Netto-/Bruttopreise und Gewicht. Alle Schlüssel sind stabile Codes, keine Anzeigetexte.
+
+## Demo veröffentlichen (FTP)
+
+Der Workflow `.github/workflows/deploy-ftp.yml` testet die Preislogik und lädt den Ordner `app/` per FTP hoch, bei jedem Push auf `main` (Änderungen in `app/`) oder per Hand unter *Actions → Demo per FTP veröffentlichen → Run workflow*.
+
+Einmalig unter *Settings → Secrets and variables → Actions* anlegen: `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`, `FTP_SERVER_DIR` (z. B. `/agroflor/`). Optional `FTP_PROTOCOL` (`ftps` oder `ftp`, Standard `ftps`) und `FTP_PORT`.
