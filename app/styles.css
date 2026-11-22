@@ -1,9 +1,9 @@
 /* Farben, Schriften und Formen nach agro-flor.com (Stand 22.11.2026), siehe docs/stilrichtlinien-agroflor.md.
    Layout: Arbeitsfläche wie ein Zuschnitttisch – links Auswahl, rechts das Netz im Maßstab mit Preis, darunter die Auftragsliste. */
 :root {
-  --bg: #f3f4f0;            /* helles Grau mit Grünstich hinter weißen Karten */
+  --bg: #ffffff;            /* weiße Seite wie agro-flor.com */
   --surface: #ffffff;
-  --surface-2: #f7f8f4;
+  --surface-2: #f8f9f6;
   --ink: #242424;           /* Überschriften agro-flor */
   --text: #373737;          /* Fließtext dunkel agro-flor */
   --muted: #6e6e6e;         /* agro-flor #777, leicht abgedunkelt für Lesbarkeit */
@@ -18,10 +18,10 @@
   --error: #b3261e;
   --ok: #3f6f2b;
   --grid: #e4e7df;
-  --canvas: #fbfcf9;
+  --canvas: #ffffff;
   --topbar: #265a0f;
   --on-topbar: #ffffff;
-  --shadow: 0 2px 14px rgba(30, 40, 25, .08);
+  --shadow: 0 2px 16px rgba(30, 40, 25, .10);
 
   --font-display: 'Poppins', 'Segoe UI', system-ui, sans-serif;
   --font-body: 'Lato', 'Helvetica Neue', Arial, sans-serif;
@@ -32,22 +32,8 @@
   --pill: 50px;
   --gap: 1rem;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #121511; --surface: #1b1f1a; --surface-2: #222721; --ink: #eef0eb; --text: #d9dcd5; --muted: #a2a79d;
-    --line: #333a31; --accent: #7cb35c; --accent-strong: #9bcd7c; --accent-soft: #263821; --on-accent: #0f1d09;
-    --olive: #c2c47f; --olive-ink: #c9cb88; --eyelet: #cfae62; --error: #f2857c; --ok: #94c97a;
-    --grid: #262c24; --canvas: #171a16; --topbar: #193d0a; --on-topbar: #eef0eb; --shadow: 0 2px 14px rgba(0, 0, 0, .35);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #121511; --surface: #1b1f1a; --surface-2: #222721; --ink: #eef0eb; --text: #d9dcd5; --muted: #a2a79d;
-  --line: #333a31; --accent: #7cb35c; --accent-strong: #9bcd7c; --accent-soft: #263821; --on-accent: #0f1d09;
-  --olive: #c2c47f; --olive-ink: #c9cb88; --eyelet: #cfae62; --error: #f2857c; --ok: #94c97a;
-  --grid: #262c24; --canvas: #171a16; --topbar: #193d0a; --on-topbar: #eef0eb; --shadow: 0 2px 14px rgba(0, 0, 0, .35);
-  color-scheme: dark;
-}
+/* Bewusst nur helles Schema wie agro-flor.com (weiße Seite), auch wenn das Gerät dunkel eingestellt ist. */
+:root, :root[data-theme="dark"] { color-scheme: light; }
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; }

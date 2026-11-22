@@ -15,7 +15,9 @@ Stand 22.11.2026, ausgelesen aus den berechneten Styles der Startseite https://a
 | Flächen | `#FFFFFF` | Karten, Hintergrund | `--surface` |
 | Footer | `#191919` | Footer | (nicht genutzt) |
 
-Ergänzt für den Konfigurator: `--eyelet` `#A88A43` (Messing für Ösen in der Vorschau), Fehler `#B3261E`, dunkles Farbschema aus denselben Grüntönen abgeleitet.
+Ergänzt für den Konfigurator: `--eyelet` `#A88A43` (Messing für Ösen in der Vorschau), Fehler `#B3261E`.
+
+Die Seite ist immer hell mit weißem Hintergrund, wie agro-flor.com, auch wenn das Gerät auf dunkel steht (Wunsch Markus, 22.11.2026). Es gibt kein dunkles Farbschema.
 
 ## Schriften
 
