@@ -4,6 +4,7 @@
   const cat = window.NetCatalog;
   const P = window.NetPricing;
   const G = window.NetGeometry;
+  const S = window.NetShare;
   const STORE_KEY = 'netcfg.v1';
 
   const vatPct = Math.round(cat.vatRate * 100);
@@ -33,13 +34,14 @@
     positions: [],
     rules: Object.assign({}, P.DEFAULT_RULES),
     touched: {},
+    extras: {},          // Befestigungszubehör: code → { on, qty, manual }
     edited: new Set(),   // Eingabefelder, die der Benutzer selbst geändert hat (Startwerte bei Formwechsel nur für die übrigen)
     focus: null,         // Eingabefeld mit Fokus (für die Hervorhebung in der Vorschau)
   };
 
   function newDraft() {
     const d = clone(cat.defaults);
-    return normalizeDraft({ shape: d.shape || 'RECT', material: d.material, color: d.color, widthCm: d.widthCm, heightCm: d.heightCm, quantity: d.quantity, edges: d.edges, name: '' });
+    return normalizeDraft({ shape: d.shape || 'RECT', eyeletSpacingCm: cat.eyeletOptions.defaultSpacingCm, eyeletMaterial: 'STANDARD', eyeletAligned: false, material: d.material, color: d.color, widthCm: d.widthCm, heightCm: d.heightCm, quantity: d.quantity, edges: d.edges, name: '' });
   }
 
   /** Ergänzt fehlende Maßfelder mit sinnvollen Startwerten (Oberkante = halbe Breite, freie Seiten = 75 % der Breite, mindestens die Höhe). */
@@ -52,6 +54,10 @@
     if (!Number.isFinite(d.sideRightCm)) d.sideRightCm = side;
     if (d.slant !== 'left' && d.slant !== 'right') d.slant = 'right';
     if (d.rightAngle !== 'left' && d.rightAngle !== 'right') d.rightAngle = 'left';
+    if (!Number.isFinite(d.eyeletSpacingCm)) d.eyeletSpacingCm = cat.eyeletOptions.defaultSpacingCm;
+    if (!cat.eyeletOptions.materials.some((m) => m.code === d.eyeletMaterial)) d.eyeletMaterial = 'STANDARD';
+    d.eyeletAligned = !!d.eyeletAligned;
+    d.edges = Object.assign({}, cat.defaults.edges, d.edges);
     return d;
   }
   const shapeDef = () => G.findShape(state.draft.shape) || G.findShape('RECT');
@@ -73,13 +79,17 @@
         const s = JSON.parse(raw);
         if (Array.isArray(s.positions)) state.positions = s.positions.filter((p) => P.validate(cat, p).length === 0);
         if (s.rules) state.rules = Object.assign({}, P.DEFAULT_RULES, s.rules);
+        for (const a of cat.accessories) {
+          const x = s.extras && s.extras[a.code];
+          if (x && x.on && Number.isFinite(x.qty) && x.qty >= 1) state.extras[a.code] = { on: true, qty: Math.round(x.qty), manual: !!x.manual };
+        }
         return;
       }
     } catch (e) { /* Speicher nicht verfügbar: mit Beispielen starten */ }
     state.positions = examplePositions();
   }
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify({ positions: state.positions, rules: state.rules })); } catch (e) { /* egal */ }
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ positions: state.positions, rules: state.rules, extras: state.extras })); } catch (e) { /* egal */ }
   }
 
   // ---------- Hilfen ----------
@@ -87,6 +97,12 @@
   const colorHex = (code) => (cat.colors[code] || {}).hex || '#777';
   const colorName = (code) => (cat.colors[code] || {}).name || code;
   const edgeShort = (code) => (P.findEdge(cat, code) || {}).short || code;
+  /** Kantentext einer Position; bei „eigener Abstand“ mit dem gewählten Abstand. */
+  const edgeText = (p, code) => {
+    const e = P.findEdge(cat, code);
+    if (!e) return code;
+    return e.customSpacing && Number.isFinite(p.eyeletSpacingCm) ? 'Ösen ca. alle ' + int(p.eyeletSpacingCm) + ' cm' : e.short;
+  };
   const sideLabel = (code) => cat.sides.find((s) => s.code === code).label;
 
   function luminance(hex) {
@@ -444,7 +460,7 @@
         let ox = 0, oy = 0;
         for (const code of p.sides) { const si = sideInfo.find((q) => q.s.code === code); if (si) { ox += si.nx; oy += si.ny; } }
         const cx = x0 + p.x * sx + ox * inset, cy = y0 + p.y * sy + oy * inset;
-        root.append(svg('circle', { cx, cy, r, fill: 'var(--eyelet)' }), svg('circle', { cx, cy, r: r * 0.45, fill: 'var(--canvas)' }));
+        root.append(svg('circle', { cx, cy, r, fill: d.eyeletMaterial === 'EDELSTAHL' ? '#b9bec6' : 'var(--eyelet)' }), svg('circle', { cx, cy, r: r * 0.45, fill: 'var(--canvas)' }));
       }
     }
 
@@ -478,7 +494,7 @@
     // Klickbare Kanten mit Beschriftung (Text parallel zur Seite, bei schrägen Seiten gedreht)
     for (const si of sideInfo) {
       const s = si.s;
-      const edgeTxt = edgeShort(d.edges[s.code]);
+      const edgeTxt = edgeText(d, d.edges[s.code]);
       const label = isRect ? sideLabel(s.code) + ': ' + edgeTxt
         : !(si.horizontal || si.vertical) ? int(s.lengthCm) + ' cm · ' + edgeTxt
         : sideLabel(s.code) + ' ' + int(s.lengthCm) + ' cm: ' + edgeTxt;
@@ -550,11 +566,11 @@
       [areaLabel(r) + ' × ' + eur.format(r.grossPerM2) + '/m²', eur.format(r.materialNet * vat)],
     ];
     if (state.rules.edgePricing === 'proposed') {
-      for (const l of r.edgeLines) if (l.net > 0) rows.push(['Kante ' + sideLabel(l.side) + ': ' + edgeShort(l.edge) + ', ' + num(l.lengthM) + ' m', eur.format(l.net * vat)]);
+      for (const l of r.edgeLines) if (l.net > 0) rows.push(['Kante ' + sideLabel(l.side) + ': ' + edgeText(d, l.edge) + ', ' + num(l.lengthM) + ' m', eur.format(l.net * vat)]);
     } else {
       rows.push(['Kantenverarbeitung', 'inklusive']);
     }
-    for (const a of r.accessoryLines) rows.push([a.name + ', ' + a.quantity + ' Stk', eur.format(a.net * vat)]);
+    if (r.eyeletSurchargeNet > 0) rows.push(['Edelstahl-Ösen: ' + r.eyeletCount + ' × ' + eur.format((r.eyeletSurchargeNet / r.eyeletCount) * vat) + ' Mehrpreis', eur.format(r.eyeletSurchargeNet * vat)]);
     rows.push(['sep']);
     rows.push(['Stückpreis inkl. ' + vatPct + ' % MwSt.', eur.format(r.unitGross)]);
     rows.push(['davon MwSt.', eur.format(r.unitGross - r.unitGross / vat)]);
@@ -591,7 +607,7 @@
   function renderFieldErrors(errors) {
     const se = errors.find((e) => e.field === 'shape');
     $('shape-error').textContent = se ? se.message : '';
-    const map = { widthCm: 'width', topCm: 'top', heightCm: 'height', sideLeftCm: 'side-left', sideRightCm: 'side-right', quantity: 'quantity' };
+    const map = { widthCm: 'width', topCm: 'top', heightCm: 'height', sideLeftCm: 'side-left', sideRightCm: 'side-right', eyeletSpacingCm: 'eyelet-spacing', quantity: 'quantity' };
     for (const [field, id] of Object.entries(map)) {
       const err = errors.find((e) => e.field === field);
       const show = err && (state.touched[id] || $(id).value !== '');
@@ -599,6 +615,165 @@
       $(id).closest('.field').classList.toggle('is-invalid', !!show);
       $(id).setAttribute('aria-invalid', show ? 'true' : 'false');
     }
+  }
+
+  // ---------- Ösenoptionen ----------
+  function eyeletOpts() {
+    const d = state.draft, sides = shapeSides();
+    const edges = sides.map((c) => P.findEdge(cat, d.edges[c])).filter(Boolean);
+    const spaced = (c) => { const e = P.findEdge(cat, d.edges[c]); return !!e && e.eyelets === 'spaced'; };
+    const pair = (a, b) => sides.includes(a) && sides.includes(b) && spaced(a) && spaced(b);
+    return { any: edges.some((e) => e.eyelets !== 'none'), custom: edges.some((e) => e.customSpacing), canAlign: pair('top', 'bottom') || pair('left', 'right') };
+  }
+  function renderEyeletMaterialChips() {
+    const box = $('eyelet-material');
+    box.replaceChildren(el('span', { class: 'field__label', text: 'Material' }), ...cat.eyeletOptions.materials.map((m) => el('button', {
+      type: 'button', class: 'chip', role: 'radio', 'aria-checked': 'false', 'data-code': m.code,
+      onclick: () => { state.draft.eyeletMaterial = m.code; update(); },
+      text: m.label + (m.surchargeNetPerEyelet ? ' · +' + eur.format(m.surchargeNetPerEyelet * (1 + cat.vatRate)) + ' je Öse' : ''),
+    })));
+  }
+  function renderEyeletOptions() {
+    const o = eyeletOpts(), d = state.draft;
+    $('eyelet-opts').hidden = !o.any;
+    $('f-eyelet-spacing').hidden = !o.custom;
+    if (document.activeElement !== $('eyelet-spacing')) $('eyelet-spacing').value = Number.isFinite(d.eyeletSpacingCm) ? d.eyeletSpacingCm : '';
+    $('eyelet-spacing').min = cat.eyeletOptions.minSpacingCm;
+    $('eyelet-spacing').max = cat.eyeletOptions.maxSpacingCm;
+    $('f-eyelet-aligned').hidden = !o.canAlign;
+    $('eyelet-aligned').checked = !!d.eyeletAligned;
+    document.querySelectorAll('#eyelet-material [data-code]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.code === d.eyeletMaterial)));
+  }
+  /** Zusatz zur Ösenzahl in der Positionsliste: Edelstahl, deckungsgleich. */
+  function eyeletNote(p) {
+    const parts = [];
+    if (p.eyeletMaterial === 'EDELSTAHL') parts.push('Edelstahl');
+    if (p.eyeletAligned) parts.push('deckungsgleich');
+    return parts.length ? ' (' + parts.join(', ') + ')' : '';
+  }
+
+  // ---------- Hinweis zur Preisberechnung ----------
+  /** Erklärt in Alltagssprache, wie sich der Preis zusammensetzt. Für die Seite und das PDF. */
+  function priceExplanation(opts) {
+    const vat = 1 + cat.vatRate, g = (n) => eur.format(P.grossPerM2(cat, n));
+    const items = [];
+    for (const m of opts.materials) {
+      const tiers = m.tiers.map((t, i) => (i === 0 ? 'bis ' + int(m.tiers[1] ? m.tiers[1].fromM2 : 0) + ' m²' : 'ab ' + int(t.fromM2) + ' m²') + ' ' + g(t.netPerM2)).join(', ');
+      items.push({ lead: 'Fläche × Quadratmeterpreis (' + m.name + ').', text: 'Der Preis je m² richtet sich nach der Fläche: ' + tiers + ' (brutto). Die Staffel gilt für ' + (state.rules.tierBasis === 'order' ? 'alle Stücke derselben Gaze im Auftrag zusammen.' : 'die Fläche eines einzelnen Stücks.') });
+    }
+    if (opts.nonRect) {
+      const how = { area: 'die echte Fläche der Form', area_surcharge: 'die echte Fläche plus ' + cat.shapeRules.surchargePct + ' % für den Zuschnitt', bbox: 'das umschließende Rechteck der Form' }[state.rules.shapePricing];
+      items.push({ lead: 'Trapez und Dreieck.', text: 'Berechnet wird ' + how + '.' });
+    }
+    items.push({ lead: 'Kanten und Ösen.', text: state.rules.edgePricing === 'proposed'
+      ? 'Die Kantenverarbeitung wird je Laufmeter extra berechnet (Demo-Werte). Standardösen sind enthalten.'
+      : 'Saum, Hohlsaum, Schnittkante und Standardösen sind im Quadratmeterpreis enthalten.' });
+    const niro = cat.eyeletOptions.materials.find((m) => m.surchargeNetPerEyelet > 0);
+    if (niro) items.push({ lead: 'Edelstahl-Ösen.', text: 'Mehrpreis ' + eur.format(niro.surchargeNetPerEyelet * vat) + ' je Öse (Demo-Preis).' });
+    items.push({ lead: 'Befestigung.', text: 'Zubehör wird je Stück berechnet und steht im Angebot als eigener Block (Demo-Preise).' });
+    items.push({ lead: 'Brutto, Rundung, Versand.', text: 'Alle Preise sind Bruttopreise inkl. ' + vatPct + ' % MwSt., zzgl. Versand. Je Stück wird auf den Cent gerundet und dann mit der Menge multipliziert.' });
+    return items;
+  }
+  function renderHowto() {
+    const items = priceExplanation({ materials: [mat()], nonRect: shapeDef().code !== 'RECT' });
+    $('price-howto-body').replaceChildren(...items.map((i) => el('li', {}, [el('b', { text: i.lead + ' ' }), i.text])));
+  }
+
+  // ---------- Befestigung (Zubehör) ----------
+  const orderBase = () => { const own = state.positions.filter((p) => !p.example); return own.length ? own : state.positions; };
+  function totalEyelets() {
+    return orderBase().reduce((a, p) => (P.validate(cat, p).length ? a : a + P.eyelets(cat, p).count * p.quantity), 0);
+  }
+  /** Vorgeschlagene Mengen folgen den Positionen, solange der Benutzer die Menge nicht selbst geändert hat. */
+  function syncExtrasQty() {
+    const n = totalEyelets();
+    for (const a of cat.accessories) { const x = state.extras[a.code]; if (x && x.on && !x.manual) x.qty = Math.max(1, Math.ceil(n * a.perEyelet)); }
+  }
+  function extrasList() {
+    return cat.accessories.filter((a) => state.extras[a.code] && state.extras[a.code].on && state.extras[a.code].qty >= 1)
+      .map((a) => ({ code: a.code, quantity: state.extras[a.code].qty }));
+  }
+  function renderExtras() {
+    const n = totalEyelets();
+    $('extras').hidden = n === 0;
+    if (n === 0) return;
+    $('extras-hint').textContent = 'Ihre Positionen haben ' + int(n) + ' Ösen. Dazu passt Befestigungszubehör. Die Menge ist je Öse vorgeschlagen und lässt sich ändern. Demo-Preise, brutto je Stück.';
+    const vat = 1 + cat.vatRate;
+    const rows = cat.accessories.map((a) => {
+      const x = state.extras[a.code];
+      const on = !!(x && x.on);
+      const unit = P.round2(a.netPrice * vat);
+      const sum = el('span', { class: 'extra__sum', text: on ? eur.format(P.round2(unit * x.qty)) : '' });
+      const qty = el('input', {
+        type: 'number', inputmode: 'numeric', min: '1', max: '99999', step: '1', 'aria-label': 'Menge ' + a.name, value: on ? String(x.qty) : String(Math.ceil(n * a.perEyelet)),
+        oninput: (ev) => {
+          const v = Math.floor(Number(ev.target.value));
+          if (!(v >= 1)) return;
+          state.extras[a.code] = { on: true, qty: Math.min(v, 99999), manual: true };
+          cb.checked = true; row.classList.add('is-on'); sum.textContent = eur.format(P.round2(unit * state.extras[a.code].qty));
+          save(); renderOrder();
+        },
+      });
+      const cb = el('input', {
+        type: 'checkbox', checked: on,
+        onchange: (ev) => {
+          // direkt in der Zeile aktualisieren, damit der Fokus beim Tastaturbenutzer bleibt
+          if (ev.target.checked) {
+            const q = Math.max(1, Math.ceil(totalEyelets() * a.perEyelet));
+            state.extras[a.code] = { on: true, qty: q, manual: false };
+            qty.value = String(q); sum.textContent = eur.format(P.round2(unit * q));
+          } else {
+            delete state.extras[a.code];
+            sum.textContent = '';
+          }
+          row.classList.toggle('is-on', ev.target.checked);
+          save(); renderOrder();
+        },
+      });
+      const row = el('div', { class: 'extra' + (on ? ' is-on' : '') }, [
+        el('label', { class: 'check extra__main' }, [cb, el('span', {}, [el('b', { text: a.name }), el('small', { text: a.hint })])]),
+        el('span', { class: 'extra__price', text: eur.format(unit) + ' / Stk' }),
+        el('label', { class: 'extra__qty' }, [qty, el('span', { class: 'unit', text: 'Stk' })]),
+        sum,
+      ]);
+      return row;
+    });
+    $('extras-list').replaceChildren(...rows);
+  }
+
+  // ---------- Speichern und Teilen per Link ----------
+  const linkStatus = (text, isError) => { const s = $('pdf-status'); s.textContent = text; s.classList.toggle('is-error', !!isError); };
+  function makeLink() {
+    const own = state.positions.filter((p) => !p.example);
+    if (!own.length) { linkStatus('Bitte zuerst eigene Positionen anlegen.', true); return; }
+    const url = location.href.split('#')[0] + '#k=' + S.encode({ positions: own, rules: state.rules, extras: extrasList() });
+    const done = () => linkStatus('Link kopiert. Wer ihn öffnet, sieht diese ' + own.length + (own.length === 1 ? ' Position.' : ' Positionen.'), false);
+    const fallback = () => { window.prompt('Link zum Kopieren (⌘C bzw. Strg+C):', url); };
+    try { navigator.clipboard.writeText(url).then(done, fallback); } catch (e) { fallback(); }
+  }
+  const RULE_VALUES = { tierBasis: ['piece', 'order'], edgePricing: ['included', 'proposed'], shapePricing: ['area', 'area_surcharge', 'bbox'] };
+  /** Übernimmt eine Konfiguration aus einem Link. Gibt true zurück, wenn etwas übernommen wurde. */
+  function applyShared(text) {
+    const data = S.decode(text);
+    if (!data) { linkStatus('Der Link ist nicht lesbar.', true); return false; }
+    const list = data.positions.map((p) => normalizeDraft(Object.assign({ id: uid() }, p))).filter((p) => P.validate(cat, p).length === 0);
+    if (!list.length) { linkStatus('Der Link enthält keine gültigen Positionen.', true); return false; }
+    const own = state.positions.filter((p) => !p.example);
+    if (own.length && !window.confirm('Der Link ersetzt Ihre aktuellen ' + own.length + ' Positionen. Fortfahren?')) return false;
+    state.positions = list.map((p) => Object.assign(p, { name: p.name || '' }));
+    for (const [k, allowed] of Object.entries(RULE_VALUES)) if (allowed.includes(data.rules[k])) state.rules[k] = data.rules[k];
+    state.extras = {};
+    for (const x of data.extras) if (cat.accessories.some((a) => a.code === x.code) && x.quantity >= 1) state.extras[x.code] = { on: true, qty: Math.min(x.quantity, 99999), manual: true };
+    state.editingId = null;
+    save(); syncRules(); update();
+    linkStatus('Konfiguration aus dem Link geladen (' + list.length + (list.length === 1 ? ' Position).' : ' Positionen).'), false);
+    return true;
+  }
+  function checkHash() {
+    if (!location.hash.startsWith('#k=')) return;
+    const text = location.hash.slice(3);
+    history.replaceState(null, '', location.href.split('#')[0]);
+    applyShared(text);
   }
 
   // ---------- Auftrag ----------
@@ -616,7 +791,8 @@
   }
 
   function renderOrder() {
-    const order = P.priceOrder(cat, state.positions, state.rules);
+    syncExtrasQty();
+    const order = P.priceOrder(cat, state.positions, state.rules, extrasList());
     const box = $('positions');
     if (!state.positions.length) {
       box.replaceChildren(el('div', { class: 'empty', text: 'Noch keine Positionen. Netz oben zusammenstellen und „Position hinzufügen“ wählen.' }));
@@ -624,14 +800,14 @@
       box.replaceChildren(...order.lines.map(({ position: p, price: r }, i) => {
         const m = P.findMaterial(cat, p.material);
         const gsides = r.geometry.sides;
-        const edges = gsides.map((s) => s.label[0] + ': ' + edgeShort(p.edges[s.code]));
+        const edges = gsides.map((s) => s.label[0] + ': ' + edgeText(p, p.edges[s.code]));
         const sameEdges = new Set(gsides.map((s) => p.edges[s.code])).size === 1;
         return el('article', { class: 'pos' + (p.id === state.editingId ? ' is-editing' : '') }, [
           thumb(p),
           el('div', { class: 'pos__main' }, [
             el('div', { class: 'pos__name' }, [(i + 1) + '. ' + (p.name || m.name), p.example ? el('span', { class: 'pos__example', text: 'Beispiel' }) : null]),
             el('div', { class: 'pos__meta', text: m.name + ' ' + colorName(p.color) + ' · ' + dimsText(p) + ' · ' + num(r.areaM2) + ' m²' + (r.billedAreaM2 !== r.areaM2 ? ' (berechnet ' + num(r.billedAreaM2) + ' m²)' : '') }),
-            el('div', { class: 'pos__meta', text: (sameEdges ? 'rundum ' + edgeShort(p.edges[gsides[0].code]) : edges.join(' · ')) + (r.eyeletCount ? ' · ' + r.eyeletCount + ' Ösen' : '') }),
+            el('div', { class: 'pos__meta', text: (sameEdges ? 'rundum ' + edgeText(p, p.edges[gsides[0].code]) : edges.join(' · ')) + (r.eyeletCount ? ' · ' + r.eyeletCount + ' Ösen' + eyeletNote(p) : '') }),
           ]),
           el('div', { class: 'pos__price' }, [el('b', { text: eur.format(r.lineGross) }), el('small', { text: p.quantity + ' × ' + eur.format(r.unitGross) })]),
           el('div', { class: 'pos__actions' }, [
@@ -646,6 +822,7 @@
     $('totals').replaceChildren(
       el('dt', { text: 'Fläche gesamt' }), el('dd', { text: num(order.totalAreaM2) + ' m² · ' + pieces + ' Stk' }),
       el('dt', { text: 'Versandgewicht' }), el('dd', { text: num(order.weightKg, 1) + ' kg' }),
+      ...(order.extraLines.length ? [el('dt', { text: 'davon Befestigung (brutto)' }), el('dd', { text: eur.format(order.extrasGross) })] : []),
       el('dt', { text: 'Netto' }), el('dd', { text: eur.format(order.totalNet) }),
       el('dt', { text: 'MwSt. ' + vatPct + ' %' }), el('dd', { text: eur.format(order.vat) }),
       el('dt', { class: 'grand', text: 'Gesamt' }), el('dd', { class: 'grand', text: eur.format(order.totalGross) }),
@@ -654,7 +831,7 @@
 
   function commitDraft() {
     const errors = P.validate(cat, state.draft);
-    if (errors.length) { state.touched = { width: true, height: true, top: true, 'side-left': true, 'side-right': true, quantity: true }; update(); return; }
+    if (errors.length) { state.touched = { width: true, height: true, top: true, 'side-left': true, 'side-right': true, 'eyelet-spacing': true, quantity: true }; update(); return; }
     const data = clone(state.draft);
     if (state.editingId) {
       const i = state.positions.findIndex((p) => p.id === state.editingId);
@@ -664,6 +841,7 @@
     }
     state.editingId = null;
     state.draft.name = '';
+    $('pos-name').value = '';
     save();
     update();
     $('positions').lastElementChild && $('positions').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
@@ -676,6 +854,7 @@
     state.draft = normalizeDraft({
       shape: p.shape || 'RECT', material: p.material, color: p.color, widthCm: p.widthCm, heightCm: p.heightCm,
       topCm: p.topCm, sideLeftCm: p.sideLeftCm, sideRightCm: p.sideRightCm, slant: p.slant, rightAngle: p.rightAngle,
+      eyeletSpacingCm: p.eyeletSpacingCm, eyeletMaterial: p.eyeletMaterial, eyeletAligned: p.eyeletAligned,
       quantity: p.quantity, edges: clone(p.edges), name: p.name || '',
     });
     state.edited = new Set(['topCm', 'sideLeftCm', 'sideRightCm']);
@@ -731,7 +910,7 @@
     status.classList.remove('is-error');
     status.textContent = 'PDF wird erstellt …';
     try {
-      const order = P.priceOrder(cat, own, state.rules);
+      const order = P.priceOrder(cat, own, state.rules, extrasList());
       const items = order.lines.map(({ position: p, price: r }, i) => {
         const m = P.findMaterial(cat, p.material);
         const color = m.colors.find((c) => c.code === p.color);
@@ -746,17 +925,19 @@
           table: geo.sides.map((s) => {
             const e = P.findEdge(cat, p.edges[s.code]);
             const eye = e.eyelets === 'spaced' ? (ey.interiorBySide[s.code] || 0) + ' + Ecken (ca. alle ' + int(ey.spacingBySide[s.code]) + ' cm)' : e.eyelets === 'corners' ? 'nur Ecken' : '–';
-            return [s.label, s.lengthCm, e.short, eye];
+            return [s.label, s.lengthCm, edgeText(p, p.edges[s.code]), eye];
           }),
           angles: geo.shape === 'RECT' ? null : geo.anglesDeg,
-          eyelets: r.eyeletCount, unitNet: r.unitNet, unitGross: r.unitGross,
+          eyelets: r.eyeletCount, eyeletNote: eyeletNote(p), unitNet: r.unitNet, unitGross: r.unitGross,
           lineNet: P.round2(r.lineGross / (1 + cat.vatRate)), lineGross: r.lineGross,
         };
       });
       const pieces = own.reduce((a, p) => a + p.quantity, 0);
       const pdf = await window.NetPdf.create({
         title: 'Angebotsanfrage', items,
-        totals: { areaM2: order.totalAreaM2, pieces, weightKg: order.weightKg, net: order.totalNet, vat: order.vat, gross: order.totalGross },
+        extras: order.extraLines,
+        priceNotes: priceExplanation({ materials: [...new Set(own.map((p) => p.material))].map((c) => P.findMaterial(cat, c)), nonRect: own.some((p) => G.shapeCode(p) !== 'RECT') }).map((i) => i.lead + ' ' + i.text),
+        totals: { areaM2: order.totalAreaM2, pieces, weightKg: order.weightKg, extrasGross: order.extrasGross, net: order.totalNet, vat: order.vat, gross: order.totalGross },
         vatPct,
       });
       status.textContent = 'PDF erstellt, wird auf dem Server gespeichert …';
@@ -776,7 +957,6 @@
     $('tier-order').checked = state.rules.tierBasis === 'order';
     $('edge-included').checked = state.rules.edgePricing === 'included';
     $('edge-proposed').checked = state.rules.edgePricing === 'proposed';
-    $('acc').checked = !!state.rules.accessories;
     $('shape-area').checked = state.rules.shapePricing === 'area';
     $('shape-surcharge').checked = state.rules.shapePricing === 'area_surcharge';
     $('shape-bbox').checked = state.rules.shapePricing === 'bbox';
@@ -792,7 +972,10 @@
     renderFieldErrors(errors);
     renderPreview(errors);
     renderPrice(errors);
+    renderEyeletOptions();
+    renderHowto();
     renderOrder();
+    renderExtras();
     document.dispatchEvent(new Event('netcfg:update'));
   }
 
@@ -800,7 +983,7 @@
   window.NetConfigurator = {
     getOrder() {
       const own = state.positions.filter((p) => !p.example);
-      return own.length ? P.exportOrder(cat, own, state.rules) : null;
+      return own.length ? P.exportOrder(cat, own, state.rules, extrasList()) : null;
     },
   };
 
@@ -836,9 +1019,13 @@
     $('mb-add').addEventListener('click', commitDraft);
     $('cancel-btn').addEventListener('click', cancelEdit);
     $('pdf-btn').addEventListener('click', exportPdf);
+    $('link-btn').addEventListener('click', makeLink);
+    $('eyelet-spacing').addEventListener('input', () => { state.draft.eyeletSpacingCm = readNumber('eyelet-spacing'); update(); });
+    $('eyelet-spacing').addEventListener('blur', () => { state.touched['eyelet-spacing'] = true; update(); });
+    $('eyelet-aligned').addEventListener('change', (e) => { state.draft.eyeletAligned = e.target.checked; update(); });
+    window.addEventListener('hashchange', checkHash);
     document.querySelectorAll('input[name="tierBasis"]').forEach((r) => r.addEventListener('change', () => { state.rules.tierBasis = r.value; save(); update(); }));
     document.querySelectorAll('input[name="edgePricing"]').forEach((r) => r.addEventListener('change', () => { state.rules.edgePricing = r.value; save(); update(); }));
-    $('acc').addEventListener('change', (e) => { state.rules.accessories = e.target.checked; save(); update(); });
     document.querySelectorAll('input[name="shapePricing"]').forEach((r) => r.addEventListener('change', () => { state.rules.shapePricing = r.value; save(); update(); }));
   }
 
@@ -848,9 +1035,11 @@
   $('vat-note').textContent = 'Beispielsortiment und -preise, inkl. ' + vatPct + ' % MwSt., zzgl. Versand';
   load();
   renderShapes();
+  renderEyeletMaterialChips();
   renderMaterials();
   syncInputs();
   syncRules();
   bind();
   update();
+  checkHash();
 })();

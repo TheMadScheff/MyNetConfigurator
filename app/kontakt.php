@@ -62,7 +62,22 @@ if (is_array($order) && is_array($order['positions'] ?? null)) {
         } else {
             $lines[] = sprintf('   %s × %s cm', clean($dim['widthCm'] ?? '', 10), clean($dim['heightCm'] ?? '', 10));
         }
+        $eo = is_array($p['eyeletOptions'] ?? null) ? $p['eyeletOptions'] : [];
+        $eoParts = [];
+        if (clean($eo['material'] ?? '', 20) === 'EDELSTAHL') $eoParts[] = 'Edelstahl-Ösen';
+        if (!empty($eo['aligned'])) $eoParts[] = 'Ösen deckungsgleich';
+        if (is_numeric($eo['spacingCm'] ?? null)) $eoParts[] = 'Ösenabstand ' . (int) $eo['spacingCm'] . ' cm';
+        if ($eoParts) $lines[] = '   ' . implode(', ', $eoParts);
         $lines[] = sprintf('   Summe brutto: %s', eur($pr['lineGross'] ?? 0));
+        $lines[] = '';
+    }
+    $acc = is_array($order['accessories'] ?? null) ? array_slice($order['accessories'], 0, 20) : [];
+    if ($lines && $acc) {
+        $lines[] = 'Befestigung:';
+        foreach ($acc as $x) {
+            if (!is_array($x)) continue;
+            $lines[] = sprintf('   %d × %s (%s), %s', (int) ($x['quantity'] ?? 0), clean($x['code'] ?? '', 30), clean($x['sku'] ?? '', 30), eur($x['lineGross'] ?? 0));
+        }
         $lines[] = '';
     }
     if ($lines && is_array($order['totals'] ?? null)) {

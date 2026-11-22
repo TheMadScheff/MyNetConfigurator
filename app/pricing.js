@@ -8,7 +8,7 @@
  *   berechnete Fläche = bei Trapez/Dreieck je nach Regel shapePricing: echte Fläche, mit Zuschlag oder umschließendes Rechteck
  *   m2_preis       = Staffelpreis(material, staffelfläche)   // staffelfläche = Stückfläche oder Auftragsfläche
  *   kanten         = Σ kantenlänge_m × aufpreis_lfm(kantenart)
- *   zubehör        = Ösen × Kabelbinder (optional)
+ *   ösen_mehrpreis = Ösenanzahl × Mehrpreis des Ösenmaterials (Standard 0, Edelstahl Demo-Wert)
  *   stück_netto    = fläche_m2 × m2_preis + kanten + zubehör
  *   stück_brutto   = rund2(stück_netto × (1 + MwSt.-Satz), derzeit 20 %)
  *   position       = stück_brutto × menge
@@ -20,7 +20,6 @@
   const DEFAULT_RULES = {
     tierBasis: 'piece',        // 'piece' = wie heute (Staffel je Stückfläche), 'order' = Summe gleicher Gaze im Auftrag
     edgePricing: 'included',   // 'included' = wie heute (Kante im m²-Preis), 'proposed' = Aufpreis je lfm
-    accessories: false,        // Kabelbinder je Öse vorschlagen
     shapePricing: 'area_surcharge', // Trapez/Dreieck: 'area' = echte Fläche, 'area_surcharge' = + Zuschlag (shapeRules.surchargePct), 'bbox' = umschließendes Rechteck
   };
 
@@ -107,6 +106,15 @@
         }
       }
     }
+    // Ösenoptionen
+    const O = cat.eyeletOptions;
+    const usesCustom = shape && shape.sides.some((sd) => { const e = findEdge(cat, pos.edges && pos.edges[sd]); return e && e.customSpacing; });
+    if (usesCustom) {
+      const v = pos.eyeletSpacingCm;
+      if (!intOk(v)) errors.push({ field: 'eyeletSpacingCm', message: 'Ösenabstand bitte in ganzen Zentimetern angeben.' });
+      else if (v < O.minSpacingCm || v > O.maxSpacingCm) errors.push({ field: 'eyeletSpacingCm', message: 'Ösenabstand zwischen ' + O.minSpacingCm + ' und ' + O.maxSpacingCm + ' cm wählen.' });
+    }
+    if (pos.eyeletMaterial !== undefined && !O.materials.some((m) => m.code === pos.eyeletMaterial)) errors.push({ field: 'eyeletMaterial', message: 'Bitte ein Ösenmaterial wählen.' });
     if (!intOk(pos.quantity) || pos.quantity < 1) errors.push({ field: 'quantity', message: 'Mindestens 1 Stück.' });
     else if (pos.quantity > 999) errors.push({ field: 'quantity', message: 'Höchstens 999 Stück je Position.' });
     for (const s of cat.sides.filter((x) => !shape || shape.sides.includes(x.code))) {
@@ -137,12 +145,25 @@
       const sides = [g.sides[(i - 1 + n) % n].code, g.sides[i].code];
       if (sides.some(has)) points.push({ x: v.x, y: v.y, corner: true, sides });
     });
+    // Segmente je Seite: Länge / Abstand, aufgerundet. „Deckungsgleich“: gegenüberliegende Seiten bekommen gleich viele Segmente,
+    // damit sich die Ösen gegenüberstehen (das jeweils größere gilt, der Abstand bleibt also eingehalten).
+    const segs = {};
     for (const s of g.sides) {
       const e = findEdge(cat, pos.edges[s.code]);
       if (!e || e.eyelets !== 'spaced') continue;
-      const L = s.lengthExactCm;
-      const segments = Math.max(1, Math.ceil(L / e.eyeletSpacingCm - 1e-9));
-      spacingBySide[s.code] = L / segments;
+      const spacing = e.customSpacing ? pos.eyeletSpacingCm : e.eyeletSpacingCm;
+      if (!(spacing > 0)) continue;
+      segs[s.code] = Math.max(1, Math.ceil(s.lengthExactCm / spacing - 1e-9));
+    }
+    if (pos.eyeletAligned) {
+      for (const [x, y] of [['top', 'bottom'], ['left', 'right']]) {
+        if (segs[x] && segs[y]) segs[x] = segs[y] = Math.max(segs[x], segs[y]);
+      }
+    }
+    for (const s of g.sides) {
+      const segments = segs[s.code];
+      if (!segments) continue;
+      spacingBySide[s.code] = s.lengthExactCm / segments;
       interiorBySide[s.code] = segments - 1;
       for (let i = 1; i < segments; i++) {
         const t = i / segments;
@@ -185,16 +206,11 @@
     const edgeNet = edgeLines.reduce((a, l) => a + l.net, 0);
 
     const ey = eyelets(cat, pos);
-    const accessoryLines = [];
-    if (rules.accessories && ey.count > 0) {
-      for (const acc of cat.accessories) {
-        const qty = Math.ceil(ey.count * acc.perEyelet);
-        accessoryLines.push({ code: acc.code, name: acc.name, quantity: qty, unitNet: acc.netPrice, net: qty * acc.netPrice });
-      }
-    }
-    const accessoryNet = accessoryLines.reduce((a, l) => a + l.net, 0);
+    const mats = cat.eyeletOptions.materials;
+    const eyeletMat = mats.find((m) => m.code === pos.eyeletMaterial) || mats[0];
+    const eyeletSurchargeNet = ey.count * eyeletMat.surchargeNetPerEyelet;
 
-    const unitNet = materialNet + edgeNet + accessoryNet;
+    const unitNet = materialNet + edgeNet + eyeletSurchargeNet;
     const unitGross = round2(unitNet * (1 + cat.vatRate));
     const lineGross = round2(unitGross * pos.quantity);
 
@@ -219,8 +235,8 @@
       edgeNet,
       eyeletCount: ey.count,
       eyeletSpacingBySide: ey.spacingBySide,
-      accessoryLines,
-      accessoryNet,
+      eyeletMaterial: eyeletMat.code,
+      eyeletSurchargeNet,
       unitNet,
       unitGross,
       quantity: pos.quantity,
@@ -229,8 +245,21 @@
     };
   }
 
+  /** Befestigungszubehör: extras = [{ code, quantity }]. Unbekannte Codes und Mengen unter 1 werden ignoriert. */
+  function priceExtras(cat, extras) {
+    const out = [];
+    for (const x of extras || []) {
+      const acc = (cat.accessories || []).find((a) => a.code === x.code);
+      const quantity = Math.round(x.quantity);
+      if (!acc || !(quantity >= 1) || quantity > 99999) continue;
+      const unitGross = round2(acc.netPrice * (1 + cat.vatRate));
+      out.push({ code: acc.code, sku: acc.sku, name: acc.name, unit: acc.unit, quantity, unitNet: acc.netPrice, unitGross, lineGross: round2(unitGross * quantity) });
+    }
+    return out;
+  }
+
   /** Rechnet alle Positionen eines Auftrags. */
-  function priceOrder(cat, positions, rules) {
+  function priceOrder(cat, positions, rules, extras) {
     rules = Object.assign({}, DEFAULT_RULES, rules || {});
     const valid = positions.filter((p) => validate(cat, p).length === 0);
     const areaByMaterial = {};
@@ -239,10 +268,16 @@
       position: p,
       price: pricePosition(cat, p, rules, rules.tierBasis === 'order' ? areaByMaterial[p.material] : null),
     }));
-    const totalGross = round2(lines.reduce((a, l) => a + l.price.lineGross, 0));
+    const extraLines = priceExtras(cat, extras);
+    const positionsGross = round2(lines.reduce((a, l) => a + l.price.lineGross, 0));
+    const extrasGross = round2(extraLines.reduce((a, l) => a + l.lineGross, 0));
+    const totalGross = round2(positionsGross + extrasGross);
     const totalNet = round2(totalGross / (1 + cat.vatRate));
     return {
       lines,
+      extraLines,
+      positionsGross,
+      extrasGross,
       totalGross,
       totalNet,
       vat: round2(totalGross - totalNet),
@@ -265,8 +300,8 @@
   }
 
   /** Export-Struktur für Phase 2 (Odoo). Nur Codes und Zahlen, keine Anzeigetexte als Schlüssel. */
-  function exportOrder(cat, positions, rules) {
-    const order = priceOrder(cat, positions, rules);
+  function exportOrder(cat, positions, rules, extras) {
+    const order = priceOrder(cat, positions, rules, extras);
     return {
       schema: 'net-configurator/order@2',
       createdAt: new Date().toISOString(),
@@ -288,7 +323,7 @@
           },
           edges: Object.fromEntries(r.geometry.sides.map((s) => [s.code, p.edges[s.code]])),
           eyelets: r.eyeletCount,
-          accessories: r.accessoryLines.map((a) => ({ code: a.code, quantity: a.quantity })),
+          eyeletOptions: { material: r.eyeletMaterial, spacingCm: r.geometry.sides.some((sd) => (findEdge(cat, p.edges[sd.code]) || {}).customSpacing) ? p.eyeletSpacingCm : null, aligned: !!p.eyeletAligned, surchargeNet: round2(r.eyeletSurchargeNet) },
           quantity: p.quantity,
           price: {
             tierFromM2: r.tier.fromM2,
@@ -300,11 +335,12 @@
           weightKg: round2(r.weightKg),
         };
       }),
+      accessories: order.extraLines.map((l) => ({ code: l.code, sku: l.sku, quantity: l.quantity, unitGross: l.unitGross, lineGross: l.lineGross })),
       totals: { net: order.totalNet, vat: order.vat, gross: order.totalGross, weightKg: round2(order.weightKg) },
     };
   }
 
-  const api = { DEFAULT_RULES, round2, findMaterial, findEdge, areaM2, billedAreaM2, sideLengthCm, validate, eyelets, tierFor, grossPerM2, pricePosition, priceOrder, exportOrder };
+  const api = { DEFAULT_RULES, round2, findMaterial, findEdge, areaM2, billedAreaM2, priceExtras, sideLengthCm, validate, eyelets, tierFor, grossPerM2, pricePosition, priceOrder, exportOrder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.NetPricing = api;
 })(typeof window !== 'undefined' ? window : globalThis);

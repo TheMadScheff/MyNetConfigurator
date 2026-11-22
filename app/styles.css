@@ -334,3 +334,32 @@ button, input, select, textarea { font: inherit; color: inherit; }
 #shape-error:empty { display: none; }
 .dimline.is-hi { stroke: var(--accent); stroke-width: 2; }
 .dimtext.is-hi { fill: var(--accent-strong); }
+
+/* Ösenoptionen */
+.eyeopts { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--line); display: grid; gap: .7rem; }
+.eyeopts__title { margin: 0; font: 600 .95rem var(--font-display); color: var(--ink); }
+.field--spacing { max-width: 14rem; }
+.eyeopts .orient { margin-top: 0; }
+
+/* Hinweis zur Preisberechnung */
+.howto { margin-top: .9rem; border-top: 1px solid var(--line); padding-top: .6rem; font-size: .85rem; color: var(--muted); }
+.howto summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.howto__list { margin: .6rem 0 0; padding-left: 1.1rem; display: grid; gap: .45rem; line-height: 1.45; }
+.howto__list b { color: var(--ink); font-weight: 600; }
+
+/* Befestigung */
+.extras { margin-top: 1.25rem; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); padding: .9rem; }
+.extras__title { margin: 0; font: 600 1rem var(--font-display); color: var(--ink); }
+.extras__list { display: grid; gap: .5rem; margin-top: .7rem; }
+.extra { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .4rem .9rem; align-items: center; padding: .6rem .7rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.extra.is-on { border-color: var(--accent); }
+.extra__main span { display: grid; gap: .1rem; }
+.extra__main small { color: var(--muted); font-size: .78rem; font-weight: 400; }
+.extra__price { font: .82rem var(--font-data); color: var(--muted); text-align: right; }
+.extra__qty { display: flex; align-items: center; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; width: 7.5rem; justify-self: start; }
+.extra__qty input { border: 0; padding: .4rem .5rem; width: 100%; min-width: 0; outline: none; font: 1rem var(--font-data); background: transparent; }
+.extra__qty:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.extra__sum { font: 600 .95rem var(--font-data); text-align: right; min-height: 1.2em; }
+@media (min-width: 720px) {
+  .extra { grid-template-columns: minmax(0, 1fr) 7rem 7.5rem 6rem; }
+}

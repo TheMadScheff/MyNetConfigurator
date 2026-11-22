@@ -4,10 +4,14 @@
 
 - [x] **Formen: Trapez und Dreieck** im geführten Konfigurator, umgesetzt nach [docs/anleitung-formen.md](docs/anleitung-formen.md). Offen bleibt die Klärung mit Agroflor (Abrechnung, Zuschlag, Mindestwinkel und -seitenlänge), siehe unten in der Anleitung.
 
+## Neu erledigt: Hinweis zur Preisberechnung
+
+- [x] Unter dem Preis steht „So berechnet sich der Preis“, im PDF am Ende „So berechnet sich der Preis“.
+
 ## Aus dem Review der Demo (scheffknecht.net/agroflor)
 
 - [x] Lokalen Stand pushen (erledigt in 027851d).
-- [ ] allbuyone-Sortiment und Preise durch Agroflor-Netze ersetzen (`app/catalog.js`). SKUs sind schon Demo-Nummern, Namen und Preise sind noch allbuyone.
+- [x] Sortiment und Preise: Die Preise sind von Agroflor freigegeben, die Sortimentsnamen bleiben (Entscheidung Markus, 22.11.2026). Nicht mehr nachfragen, nur wenn Markus es wieder erwähnt.
 - [x] MwSt. auf 20 % (Österreich).
 - [x] Impressum und Datenschutz: bleiben bei Agroflor verlinkt (Entscheidung Markus, 22.11.2026).
 - [x] Titel „Angebotsanfrage“.
@@ -18,7 +22,8 @@
 
 - [ ] Produktbereich als ersten Schritt (Hagel, Wind, Sichtschutz/Bauzaun, Event, Insekten).
 - [ ] Kantenpreis je Laufmeter und Ösen je Stück als Standard-Preismodell.
-- [ ] Mehr Ösenoptionen: eigener Abstand, Edelstahl, „deckungsgleich“.
-- [ ] Speichern und Teilen per Link.
-- [ ] Befestigungszubehör im Ablauf (Gummiseil, Spanner, Haken).
-- [ ] Telefonnummer neben dem Preis und „Muster anfordern“.
+- [x] Mehr Ösenoptionen: Ösen alle 30 cm, eigener Abstand, Edelstahl (Mehrpreis Demo-Wert), „deckungsgleich“.
+- [x] Speichern und Teilen per Link (Button „Link zum Speichern und Teilen“, Daten stehen im Link-Anker `#k=…`, nichts geht an den Server).
+- [x] Befestigungszubehör (Kabelbinder, Gummiseil, Spanner, S-Haken) als Block „Passende Befestigung“ im Auftrag, im Angebot (PDF), im Export und in der Kontaktmail. Preise und Artikelnummern sind Demo-Werte.
+- [ ] Telefonnummer neben dem Preis (Agroflor: +43 5576 25313).
+- [x] „Muster anfordern“ brauchen wir nicht (Entscheidung Markus, 22.11.2026).

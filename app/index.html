@@ -89,6 +89,17 @@
         <p class="hint">Kante in der Vorschau antippen oder hier wählen.</p>
         <div id="edges" class="edges"></div>
         <button type="button" id="edges-all" class="link-btn">Auswahl von <span id="edges-all-side">Oben</span> auf alle Seiten übernehmen</button>
+
+        <div class="eyeopts" id="eyelet-opts" hidden>
+          <h3 class="eyeopts__title">Ösen</h3>
+          <label class="field field--spacing" for="eyelet-spacing" id="f-eyelet-spacing" hidden>
+            <span class="field__label">Eigener Abstand</span>
+            <span class="field__control"><input id="eyelet-spacing" name="eyeletSpacingCm" type="number" inputmode="numeric" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="eyelet-spacing-error"></span>
+          </label>
+          <div class="orient" id="eyelet-material" role="radiogroup" aria-label="Ösenmaterial"></div>
+          <label class="check" id="f-eyelet-aligned" hidden><input type="checkbox" id="eyelet-aligned"> <span>Ösen oben/unten und links/rechts deckungsgleich (gegenüberliegende Seiten gleich viele Ösen)</span></label>
+        </div>
       </fieldset>
 
       <fieldset class="step step--row">
@@ -127,6 +138,10 @@
         </div>
         <dl class="breakdown" id="breakdown"></dl>
         <div class="ladder" id="ladder" aria-label="Staffelpreise"></div>
+        <details class="howto" id="price-howto">
+          <summary>So berechnet sich der Preis</summary>
+          <ul class="howto__list" id="price-howto-body"></ul>
+        </details>
       </div>
     </div>
   </section>
@@ -136,10 +151,18 @@
       <h2 class="order__title">Ihre Positionen</h2>
       <div class="order__tools">
         <span class="panel__status" id="pdf-status" role="status"></span>
+        <button type="button" id="link-btn" class="btn btn--ghost" title="Kopiert einen Link, der diese Positionen wieder öffnet">Link zum Speichern und Teilen</button>
         <button type="button" id="pdf-btn" class="btn btn--ghost">Als PDF exportieren</button>
       </div>
     </div>
     <div id="positions" class="positions"></div>
+
+    <section class="extras" id="extras" aria-labelledby="extras-title" hidden>
+      <h3 class="extras__title" id="extras-title">Passende Befestigung</h3>
+      <p class="hint" id="extras-hint"></p>
+      <div class="extras__list" id="extras-list"></div>
+    </section>
+
     <dl class="totals" id="totals"></dl>
 
     <details class="rules" id="rules">
@@ -160,10 +183,6 @@
           <label><input type="radio" name="shapePricing" value="area" id="shape-area"> nur die echte Fläche der Form</label>
           <label><input type="radio" name="shapePricing" value="area_surcharge" id="shape-surcharge"> echte Fläche plus Zuschlag für den Zuschnitt <span class="tag tag--new">Vorschlag, Demo-Wert <span id="shape-pct"></span> %</span></label>
           <label><input type="radio" name="shapePricing" value="bbox" id="shape-bbox"> umschließendes Rechteck (inkl. Verschnitt)</label>
-        </fieldset>
-        <fieldset class="rules__group">
-          <legend>Zubehör</legend>
-          <label><input type="checkbox" name="accessories" id="acc"> Kabelbinder (1 je Öse) mitbestellen <span class="tag tag--new">Demo-Preis</span></label>
         </fieldset>
       </div>
     </details>
@@ -215,6 +234,7 @@
 <script src="geometry.js"></script>
 <script src="catalog.js"></script>
 <script src="pricing.js"></script>
+<script src="share.js"></script>
 <script src="pdf.js"></script>
 <script src="app.js"></script>
 <script src="contact.js"></script>

@@ -66,9 +66,16 @@
     doc.text('Erstellt am ' + new Date().toLocaleDateString('de-DE') + ' · Netze nach Maß, Konfigurator (Prototyp)', ML, MT + 16);
     doc.setDrawColor(...LINE); doc.line(ML, MT + 21, PW - MR, MT + 21);
     let y = MT + 28;
+    let pageTop = y;    // Beginn des Inhalts auf der aktuellen Seite (kein Umbruch, wenn noch nichts darauf steht)
 
     // Konfigurationen
-    const TOTALS_H = 44, IMG_W = 95, TX = ML + IMG_W + 6, TW = PW - MR - TX;
+    const extras = data.extras || [];
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+    const noteLines = (data.priceNotes || []).flatMap((n) => doc.splitTextToSize('• ' + n, PW - ML - MR));
+    const notesH = noteLines.length ? 9 + noteLines.length * 3.5 : 0;
+    const extrasH = extras.length ? 16 + extras.length * 5 : 0;
+    const TOTALS_H = 50, TAIL_H = extrasH + TOTALS_H + notesH;     // Zubehör, Summen und Preishinweis bleiben zusammen
+    const IMG_W = 95, TX = ML + IMG_W + 6, TW = PW - MR - TX;
     const COLS = [ML, ML + 42, ML + 68, ML + 112];     // Zuschnitt-Tabelle: Seite, Länge, Kante, Ösen
     data.items.forEach((it, i) => {
       const shot = shots[i];
@@ -76,8 +83,8 @@
       const tableH = it.table && it.table.length ? 9 + it.table.length * 4.6 + (it.angles ? 6 : 0) : 0;
       const blockH = imgH + 8 + tableH;
       // Die letzte Position wandert mit den Summen auf eine neue Seite, damit die Summen nie allein stehen.
-      const needed = blockH + (i === data.items.length - 1 ? TOTALS_H : 0);
-      if (y + needed > PH - MB) { doc.addPage(); y = MT; }
+      const needed = blockH + (i === data.items.length - 1 ? TAIL_H : 0);
+      if (y + needed > PH - MB && y > pageTop + 0.5) { doc.addPage(); y = MT; pageTop = MT; }
 
       doc.addImage(shot.url, 'JPEG', ML, y, IMG_W, imgH);
       doc.setDrawColor(...LINE); doc.rect(ML, y, IMG_W, imgH);
@@ -95,7 +102,7 @@
       line(it.dimsText);
       line('Fläche: ' + fmt(it.areaM2) + ' m²' + (it.areaNote ? ', berechnet ' + it.areaNote : ''));
       line('Menge: ' + it.quantity + ' Stück');
-      if (it.eyelets) line('Ösen: ' + it.eyelets + ' je Stück', { gap: 1.5 });
+      if (it.eyelets) line('Ösen: ' + it.eyelets + ' je Stück' + (it.eyeletNote || ''), { gap: 1.5 });
       ty += 1;
       line('Einzelpreis: ' + eur(it.unitNet) + ' netto · ' + eur(it.unitGross) + ' brutto', { color: MUTED });
       if (it.shapeSurchargeNet > 0.004) line('davon Formzuschlag: ' + eur(it.shapeSurchargeNet) + ' netto', { color: MUTED });
@@ -128,14 +135,35 @@
       if (i < data.items.length - 1) { doc.setDrawColor(...LINE); doc.line(ML, y - 2, PW - MR, y - 2); }
     });
 
+    if (y + TAIL_H - 6 > PH - MB) { doc.addPage(); y = MT; pageTop = MT; }
+
+    // Befestigung (Zubehör) als eigener Block
+    if (extras.length) {
+      y += 2;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); setText(GREEN);
+      doc.text('Befestigung', ML, y); y += 6;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); setText(MUTED);
+      doc.text('Artikel', ML, y); doc.text('Art.-Nr.', ML + 88, y);
+      doc.text('Menge', ML + 128, y, { align: 'right' }); doc.text('Einzelpreis', ML + 152, y, { align: 'right' }); doc.text('Summe brutto', PW - MR, y, { align: 'right' });
+      doc.setDrawColor(...LINE); doc.line(ML, y + 1.6, PW - MR, y + 1.6); y += 6;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); setText(INK);
+      for (const x of extras) {
+        doc.text(x.name, ML, y); doc.text(x.sku || '', ML + 88, y);
+        doc.text(String(x.quantity), ML + 128, y, { align: 'right' });
+        doc.text(eur(x.unitGross), ML + 152, y, { align: 'right' }); doc.text(eur(x.lineGross), PW - MR, y, { align: 'right' });
+        y += 5;
+      }
+      y += 4;
+    }
+
     // Summen
     const rows = [
       ['Fläche gesamt', fmt(data.totals.areaM2) + ' m² · ' + data.totals.pieces + ' Stück'],
       ['Versandgewicht', fmt(data.totals.weightKg, 1) + ' kg'],
+      ...(extras.length ? [['davon Befestigung (brutto)', eur(data.totals.extrasGross)]] : []),
       ['Netto', eur(data.totals.net)],
       ['MwSt. ' + data.vatPct + ' %', eur(data.totals.vat)],
     ];
-    if (y + TOTALS_H - 10 > PH - MB) { doc.addPage(); y = MT; }
     y += 2;
     const X1 = 120, X2 = PW - MR;
     doc.setFontSize(10);
@@ -146,6 +174,15 @@
     doc.setDrawColor(...INK); doc.line(X1, y - 3.5, X2, y - 3.5);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); setText(GREEN);
     doc.text('Gesamt brutto', X1, y + 2); doc.text(eur(data.totals.gross), X2, y + 2, { align: 'right' });
+    y += 12;
+
+    // So berechnet sich der Preis
+    if (noteLines.length) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); setText(INK);
+      doc.text('So berechnet sich der Preis', ML, y); y += 5;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); setText(MUTED);
+      for (const l of noteLines) { doc.text(l, ML, y); y += 3.5; }
+    }
 
     // Fußzeile mit Seitenzahl
     const pages = doc.getNumberOfPages();

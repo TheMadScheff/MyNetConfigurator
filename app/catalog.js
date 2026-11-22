@@ -132,6 +132,18 @@
      * Regeln für Trapez und Dreieck (DEMO-WERTE, von Agroflor aus Sicht der Fertigung festzulegen).
      * Die Maßgrenzen oben gelten für das umschließende Rechteck der Form.
      */
+    /*
+     * Ösenoptionen (DEMO-WERTE für den Mehrpreis, von Agroflor festzulegen).
+     * eigener Abstand: Bereich in cm. Edelstahl: Mehrpreis netto je Öse gegenüber der Standardöse (Messing).
+     */
+    eyeletOptions: {
+      minSpacingCm: 10, maxSpacingCm: 200, defaultSpacingCm: 50,
+      materials: [
+        { code: 'STANDARD', label: 'Standard (Messing)', surchargeNetPerEyelet: 0 },
+        { code: 'EDELSTAHL', label: 'Edelstahl (rostfrei)', surchargeNetPerEyelet: 0.13 },
+      ],
+    },
+
     shapeRules: { minAngleDeg: 15, minSideCm: 30, minTopCm: 30, surchargePct: 15 },
 
     /*
@@ -141,6 +153,8 @@
      */
     edges: [
       { code: 'OESEN_50', label: 'gesäumt mit Ösen (ca. alle 50 cm)', short: 'Ösen ca. alle 50 cm', hem: true, eyelets: 'spaced', eyeletSpacingCm: 50, tunnelCm: 0, surchargeNetPerM: 0, proposedNetPerM: 1.6 },
+      { code: 'OESEN_30', label: 'gesäumt mit Ösen (ca. alle 30 cm)', short: 'Ösen ca. alle 30 cm', hem: true, eyelets: 'spaced', eyeletSpacingCm: 30, tunnelCm: 0, surchargeNetPerM: 0, proposedNetPerM: 1.9 },
+      { code: 'OESEN_EIGEN', label: 'gesäumt mit Ösen, eigener Abstand', short: 'Ösen mit eigenem Abstand', hem: true, eyelets: 'spaced', customSpacing: true, tunnelCm: 0, surchargeNetPerM: 0, proposedNetPerM: 1.6 },
       { code: 'OESEN_ECKEN', label: 'gesäumt, nur in den Ecken geöst', short: 'Ösen nur in den Ecken', hem: true, eyelets: 'corners', tunnelCm: 0, surchargeNetPerM: 0, proposedNetPerM: 0.9 },
       { code: 'SAUM', label: 'gesäumt', short: 'gesäumt', hem: true, eyelets: 'none', tunnelCm: 0, surchargeNetPerM: 0, proposedNetPerM: 0.7 },
       { code: 'SCHNITT', label: 'geschnitten (gerade Schnittkante)', short: 'Schnittkante', hem: false, eyelets: 'none', tunnelCm: 0, surchargeNetPerM: 0, proposedNetPerM: 0 },
@@ -156,9 +170,15 @@
       { code: 'left', label: 'Links' },
     ],
 
-    // Zubehör-Vorschlag (DEMO-PREIS, im heutigen Shop nicht im Konfigurator).
+    /*
+     * Befestigungszubehör zum Mitbestellen (DEMO-PREISE und Demo-Artikelnummern, von Agroflor festzulegen).
+     * perEyelet: Vorschlagsmenge je Öse im Auftrag. Das Zubehör steht als eigener Block im Angebot.
+     */
     accessories: [
-      { code: 'KABELBINDER', name: 'Kabelbinder schwarz, UV-beständig', unit: 'Stk', netPrice: 0.08, perEyelet: 1 },
+      { code: 'KABELBINDER', sku: 'DEMO-ZUB-KB', name: 'Kabelbinder schwarz, UV-beständig', unit: 'Stk', netPrice: 0.08, perEyelet: 1, hint: 'dauerhaft und günstig, je Öse einer' },
+      { code: 'GUMMISEIL', sku: 'DEMO-ZUB-GS', name: 'Gummiseil mit Haken, 40 cm', unit: 'Stk', netPrice: 0.65, perEyelet: 1, hint: 'federt Windlasten ab und schont das Netz' },
+      { code: 'SPANNER', sku: 'DEMO-ZUB-SP', name: 'Netzspanner (Spannquick)', unit: 'Stk', netPrice: 0.95, perEyelet: 1, hint: 'schnell spannen und nachspannen' },
+      { code: 'HAKEN', sku: 'DEMO-ZUB-HK', name: 'S-Haken, verzinkt', unit: 'Stk', netPrice: 0.35, perEyelet: 1, hint: 'zum Einhängen an Zaun, Rohr oder Seil' },
     ],
 
     // Standardwerte für eine neue Position.
