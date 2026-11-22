@@ -289,7 +289,7 @@
       for (const p of ey.points) {
         const cx = x0 + p.x * sx + (p.x === 0 ? inset : p.x === W ? -inset : 0);
         const cy = y0 + p.y * sy + (p.y === 0 ? inset : p.y === H ? -inset : 0);
-        root.append(svg('circle', { cx, cy, r, fill: 'var(--accent)' }), svg('circle', { cx, cy, r: r * 0.45, fill: 'var(--canvas)' }));
+        root.append(svg('circle', { cx, cy, r, fill: 'var(--eyelet)' }), svg('circle', { cx, cy, r: r * 0.45, fill: 'var(--canvas)' }));
       }
     }
 
