@@ -25,22 +25,22 @@
 <main class="layout">
   <section class="config" aria-label="Konfiguration">
     <form id="config-form" novalidate>
-      <fieldset class="step">
+      <fieldset class="step step--shape">
         <legend class="step__title">Form <span id="shape-name" class="step__value"></span></legend>
         <div id="shapes" class="shapes" role="radiogroup" aria-label="Form"></div>
       </fieldset>
 
-      <fieldset class="step">
+      <fieldset class="step step--material">
         <legend class="step__title">Gewebe</legend>
         <div id="materials" class="materials" role="radiogroup" aria-label="Gewebe"></div>
       </fieldset>
 
-      <fieldset class="step">
+      <fieldset class="step step--color">
         <legend class="step__title">Farbe <span id="color-name" class="step__value"></span></legend>
         <div id="colors" class="swatches" role="radiogroup" aria-label="Farbe"></div>
       </fieldset>
 
-      <fieldset class="step">
+      <fieldset class="step step--dims">
         <legend class="step__title">Maße</legend>
         <div class="dims" id="dims">
           <label class="field" for="width">
@@ -84,7 +84,7 @@
         </div>
       </fieldset>
 
-      <fieldset class="step">
+      <fieldset class="step step--edges">
         <legend class="step__title">Kanten</legend>
         <p class="hint">Kante in der Vorschau antippen oder hier wählen.</p>
         <div id="edges" class="edges"></div>
@@ -102,7 +102,7 @@
         </div>
       </fieldset>
 
-      <fieldset class="step step--row">
+      <fieldset class="step step--qty step--row">
         <legend class="step__title">Menge und Bezeichnung</legend>
         <label class="field field--qty" for="quantity">
           <span class="field__label">Stück</span>

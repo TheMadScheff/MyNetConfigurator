@@ -363,3 +363,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (min-width: 720px) {
   .extra { grid-template-columns: minmax(0, 1fr) 7rem 7.5rem 6rem; }
 }
+
+/* Handy und Tablet: geführte Reihenfolge
+   Form → Gewebe → Farbe → Maße → Vorschau → Kanten → Menge → Preis → Positionen → Anfrage */
+@media (max-width: 959px) {
+  .layout { display: flex; flex-direction: column; gap: .75rem; }
+  .config, #config-form, .stage, .stage__sticky { display: contents; }
+  .step--shape { order: 1; }
+  .step--material { order: 2; }
+  .step--color { order: 3; }
+  .step--dims { order: 4; }
+  .preview { order: 5; }
+  .step--edges { order: 6; }
+  .step--qty { order: 7; }
+  .price { order: 8; }
+  .order { order: 9; margin-top: .75rem; }
+  .contact { order: 10; }
+
+  /* Gewebe als kompakte Liste statt großer Kacheln */
+  .materials { grid-template-columns: minmax(0, 1fr); gap: .4rem; }
+  .mat { grid-template-columns: 64px minmax(0, 1fr); column-gap: .75rem; row-gap: .2rem; align-items: start; padding: .5rem .7rem .5rem .5rem; }
+  .mat > * { grid-column: 2; }
+  .mat > .mat__img { grid-column: 1; grid-row: 1 / span 5; margin: 0; aspect-ratio: 1; border-radius: calc(var(--r) - 2px); }
+  .mat .wind { display: none; }
+}
