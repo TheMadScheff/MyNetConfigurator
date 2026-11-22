@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Netze nach Maß</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar__inner">
+    <div class="brand">
+      <a class="brand__logo" href="https://agro-flor.com/" aria-label="Agroflor, zur Website"><img src="logo.jpg" width="260" height="40" alt="Agroflor"></a>
+      <span class="brand__name">Netze nach Maß</span>
+      <span class="brand__tag">Konfigurator · Prototyp</span>
+    </div>
+    <p class="topbar__note" id="vat-note">Beispielsortiment und -preise, inkl. 20 % MwSt., zzgl. Versand</p>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="config" aria-label="Konfiguration">
+    <form id="config-form" novalidate>
+      <fieldset class="step step--shape">
+        <legend class="step__title">Form <span id="shape-name" class="step__value"></span></legend>
+        <div id="shapes" class="shapes" role="radiogroup" aria-label="Form"></div>
+      </fieldset>
+
+      <fieldset class="step step--material">
+        <legend class="step__title">Gewebe</legend>
+        <div id="materials" class="materials" role="radiogroup" aria-label="Gewebe"></div>
+      </fieldset>
+
+      <fieldset class="step step--color">
+        <legend class="step__title">Farbe <span id="color-name" class="step__value"></span></legend>
+        <div id="colors" class="swatches" role="radiogroup" aria-label="Farbe"></div>
+      </fieldset>
+
+      <fieldset class="step step--dims">
+        <legend class="step__title">Maße</legend>
+        <div class="dims" id="dims">
+          <label class="field" for="width">
+            <span class="field__label" id="width-label">Breite</span>
+            <span class="field__control"><input id="width" name="widthCm" type="number" inputmode="numeric" min="100" max="4000" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="width-error"></span>
+          </label>
+          <span class="dims__x" id="dims-x" aria-hidden="true">×</span>
+          <label class="field" for="top" id="f-top" hidden>
+            <span class="field__label">Oberkante</span>
+            <span class="field__control"><input id="top" name="topCm" type="number" inputmode="numeric" min="30" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="top-error"></span>
+          </label>
+          <label class="field" for="height" id="f-height">
+            <span class="field__label">Höhe</span>
+            <span class="field__control"><input id="height" name="heightCm" type="number" inputmode="numeric" min="80" max="1800" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="height-error"></span>
+          </label>
+          <label class="field" for="side-left" id="f-side-left" hidden>
+            <span class="field__label">Linke Seite</span>
+            <span class="field__control"><input id="side-left" name="sideLeftCm" type="number" inputmode="numeric" min="30" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="side-left-error"></span>
+          </label>
+          <label class="field" for="side-right" id="f-side-right" hidden>
+            <span class="field__label">Rechte Seite</span>
+            <span class="field__control"><input id="side-right" name="sideRightCm" type="number" inputmode="numeric" min="30" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="side-right-error"></span>
+          </label>
+        </div>
+        <div class="orient" id="orient" role="radiogroup" aria-labelledby="orient-label" hidden>
+          <span class="field__label" id="orient-label">Schräge Seite</span>
+          <button type="button" class="chip" role="radio" data-orient="left" aria-checked="false">links</button>
+          <button type="button" class="chip" role="radio" data-orient="right" aria-checked="false">rechts</button>
+        </div>
+        <p class="field__error" id="shape-error" role="alert"></p>
+        <p class="hint" id="limits-hint"></p>
+        <div class="presets" id="presets" aria-label="Häufige Maße">
+          <button type="button" class="chip" data-w="341" data-h="176">Bauzaunfeld 341 × 176</button>
+          <button type="button" class="chip" data-w="250" data-h="180">Zaunfeld 250 × 180</button>
+          <button type="button" class="chip" data-w="600" data-h="120">Bühnenblende 600 × 120</button>
+        </div>
+      </fieldset>
+
+      <fieldset class="step step--edges">
+        <legend class="step__title">Kanten</legend>
+        <p class="hint">Kante in der Vorschau antippen oder hier wählen.</p>
+        <div id="edges" class="edges"></div>
+        <button type="button" id="edges-all" class="link-btn">Auswahl von <span id="edges-all-side">Oben</span> auf alle Seiten übernehmen</button>
+
+        <div class="eyeopts" id="eyelet-opts" hidden>
+          <h3 class="eyeopts__title">Ösen</h3>
+          <label class="field field--spacing" for="eyelet-spacing" id="f-eyelet-spacing" hidden>
+            <span class="field__label">Eigener Abstand</span>
+            <span class="field__control"><input id="eyelet-spacing" name="eyeletSpacingCm" type="number" inputmode="numeric" step="1"><span class="unit">cm</span></span>
+            <span class="field__error" id="eyelet-spacing-error"></span>
+          </label>
+          <div class="orient" id="eyelet-material" role="radiogroup" aria-label="Ösenmaterial"></div>
+          <label class="check" id="f-eyelet-aligned" hidden><input type="checkbox" id="eyelet-aligned"> <span>Ösen oben/unten und links/rechts deckungsgleich (gegenüberliegende Seiten gleich viele Ösen)</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="step step--qty step--row">
+        <legend class="step__title">Menge und Bezeichnung</legend>
+        <label class="field field--qty" for="quantity">
+          <span class="field__label">Stück</span>
+          <span class="field__control"><input id="quantity" name="quantity" type="number" inputmode="numeric" min="1" max="999" step="1"></span>
+          <span class="field__error" id="quantity-error"></span>
+        </label>
+        <label class="field field--grow" for="pos-name">
+          <span class="field__label">Bezeichnung (optional)</span>
+          <span class="field__control"><input id="pos-name" name="name" type="text" maxlength="60" placeholder="z. B. Bauzaun Nordseite"></span>
+        </label>
+      </fieldset>
+    </form>
+  </section>
+
+  <section class="stage" aria-label="Vorschau und Preis">
+    <div class="stage__sticky">
+      <figure class="preview">
+        <div class="preview__canvas" id="preview"></div>
+        <figcaption class="preview__facts" id="facts"></figcaption>
+      </figure>
+
+      <div class="price" aria-live="polite">
+        <div class="price__head">
+          <div>
+            <div class="price__label" id="price-label">Diese Position</div>
+            <div class="price__value" id="price-value">–</div>
+            <div class="price__sub" id="price-sub"></div>
+          </div>
+          <div class="price__actions">
+            <button type="button" id="add-btn" class="btn btn--primary">Position hinzufügen</button>
+            <button type="button" id="cancel-btn" class="btn btn--ghost" hidden>Abbrechen</button>
+          </div>
+        </div>
+        <dl class="breakdown" id="breakdown"></dl>
+        <div class="ladder" id="ladder" aria-label="Staffelpreise"></div>
+        <details class="howto" id="price-howto">
+          <summary>So berechnet sich der Preis</summary>
+          <ul class="howto__list" id="price-howto-body"></ul>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="order" aria-label="Ihre Positionen">
+    <div class="order__head">
+      <h2 class="order__title">Ihre Positionen</h2>
+      <div class="order__tools">
+        <span class="panel__status" id="pdf-status" role="status"></span>
+        <button type="button" id="link-btn" class="btn btn--ghost" title="Kopiert einen Link, der diese Positionen wieder öffnet">Link zum Speichern und Teilen</button>
+        <button type="button" id="pdf-btn" class="btn btn--ghost">Als PDF exportieren</button>
+      </div>
+    </div>
+    <div id="positions" class="positions"></div>
+
+    <section class="extras" id="extras" aria-labelledby="extras-title" hidden>
+      <h3 class="extras__title" id="extras-title">Passende Befestigung</h3>
+      <p class="hint" id="extras-hint"></p>
+      <div class="extras__list" id="extras-list"></div>
+    </section>
+
+    <dl class="totals" id="totals"></dl>
+
+    <details class="rules" id="rules">
+      <summary>Preisregeln (zum Ausprobieren)</summary>
+      <div class="rules__body">
+        <fieldset class="rules__group">
+          <legend>Staffelpreis gilt für</legend>
+          <label><input type="radio" name="tierBasis" value="piece" id="tier-piece"> die Fläche eines Stücks <span class="tag">wie heute</span></label>
+          <label><input type="radio" name="tierBasis" value="order" id="tier-order"> alle Stücke derselben Gaze im Auftrag <span class="tag tag--new">Vorschlag</span></label>
+        </fieldset>
+        <fieldset class="rules__group">
+          <legend>Kantenverarbeitung</legend>
+          <label><input type="radio" name="edgePricing" value="included" id="edge-included"> im m²-Preis enthalten <span class="tag">wie heute</span></label>
+          <label><input type="radio" name="edgePricing" value="proposed" id="edge-proposed"> Aufpreis je Laufmeter <span class="tag tag--new">Vorschlag, Demo-Werte</span></label>
+        </fieldset>
+        <fieldset class="rules__group">
+          <legend>Trapez und Dreieck: berechnete Fläche</legend>
+          <label><input type="radio" name="shapePricing" value="area" id="shape-area"> nur die echte Fläche der Form</label>
+          <label><input type="radio" name="shapePricing" value="area_surcharge" id="shape-surcharge"> echte Fläche plus Zuschlag für den Zuschnitt <span class="tag tag--new">Vorschlag, Demo-Wert <span id="shape-pct"></span> %</span></label>
+          <label><input type="radio" name="shapePricing" value="bbox" id="shape-bbox"> umschließendes Rechteck (inkl. Verschnitt)</label>
+        </fieldset>
+      </div>
+    </details>
+  </section>
+  <section class="contact" id="kontakt" aria-labelledby="contact-title">
+    <h2 class="order__title" id="contact-title">Anfrage senden</h2>
+    <p class="hint">Schreiben Sie uns, wir melden uns bei Ihnen. Auf Wunsch senden wir Ihre Positionen mit.</p>
+    <form id="contact-form" class="contact__form" novalidate>
+      <label class="field" for="c-name"><span class="field__label">Name</span>
+        <span class="field__control"><input id="c-name" name="name" type="text" autocomplete="name" maxlength="100" required></span>
+        <span class="field__error" id="c-name-error"></span></label>
+      <label class="field" for="c-email"><span class="field__label">E-Mail</span>
+        <span class="field__control"><input id="c-email" name="email" type="email" autocomplete="email" maxlength="200" required></span>
+        <span class="field__error" id="c-email-error"></span></label>
+      <label class="field" for="c-phone"><span class="field__label">Telefon (optional)</span>
+        <span class="field__control"><input id="c-phone" name="phone" type="tel" autocomplete="tel" maxlength="50"></span></label>
+      <label class="field contact__wide" for="c-message"><span class="field__label">Nachricht</span>
+        <span class="field__control"><textarea id="c-message" name="message" rows="5" maxlength="5000" required></textarea></span>
+        <span class="field__error" id="c-message-error"></span></label>
+      <div class="contact__hp" aria-hidden="true"><label>Website <input type="text" id="c-website" name="website" tabindex="-1" autocomplete="off"></label></div>
+      <label class="check contact__wide"><input type="checkbox" id="c-order"> <span id="c-order-label">Meine Positionen mitsenden</span></label>
+      <label class="check contact__wide"><input type="checkbox" id="c-consent" required> <span>Ich stimme zu, dass meine Angaben zur Bearbeitung der Anfrage verarbeitet werden. Details in der <a href="https://www.agro-flor.com/datenschutz" rel="noopener">Datenschutzerklärung</a>.</span></label>
+      <span class="field__error contact__wide" id="c-consent-error"></span>
+      <div class="contact__actions contact__wide">
+        <button type="submit" class="btn btn--primary" id="c-send">Anfrage senden</button>
+        <span class="panel__status" id="c-status" role="status"></span>
+      </div>
+    </form>
+  </section>
+</main>
+
+<footer class="sitefooter">
+  <div class="sitefooter__inner">
+    <p>Prototyp zur Ansicht. Beispielsortiment und -preise, unverbindlich.</p>
+    <nav aria-label="Rechtliches">
+      <a href="https://agro-flor.com/" rel="noopener">agro-flor.com</a>
+      <a href="https://www.agro-flor.com/impressum" rel="noopener">Impressum</a>
+      <a href="https://www.agro-flor.com/datenschutz" rel="noopener">Datenschutz</a>
+    </nav>
+  </div>
+</footer>
+
+<div class="mobilebar" id="mobilebar">
+  <div class="mobilebar__price"><span id="mb-price">–</span><small id="mb-sub"></small></div>
+  <button type="button" id="mb-add" class="btn btn--primary">Hinzufügen</button>
+</div>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="geometry.js"></script>
+<script src="catalog.js"></script>
+<script src="pricing.js"></script>
+<script src="share.js"></script>
+<script src="pdf.js"></script>
+<script src="app.js"></script>
+<script src="contact.js"></script>
+</body>
+</html>
