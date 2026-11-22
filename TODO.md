@@ -9,10 +9,10 @@
 - [x] Lokalen Stand pushen (erledigt in 027851d).
 - [ ] allbuyone-Sortiment und Preise durch Agroflor-Netze ersetzen (`app/catalog.js`). SKUs sind schon Demo-Nummern, Namen und Preise sind noch allbuyone.
 - [x] MwSt. auf 20 % (Österreich).
-- [ ] Impressum und Datenschutz des Betreibers der Demo verlinken. Die Daten landen auf scheffknecht.net, nicht bei Agroflor.
+- [x] Impressum und Datenschutz: bleiben bei Agroflor verlinkt (Entscheidung Markus, 22.11.2026).
 - [x] Titel „Angebotsanfrage“.
-- [ ] PDF-Klick soll nicht bei jedem Besucher eine Mail auslösen. Mail erst nach „Anfrage senden“ mit Kontaktdaten, dazu Spam-Schutz (Honeypot, Rate-Limit).
-- [ ] PDF: Beispielpositionen nicht mitdrucken, Maßtexte größer, Summen nicht allein auf Seite 2, netto und brutto zeigen, Firmenfuß.
+- [x] Mail beim PDF-Export bleibt wie sie ist, Spam ist kein Problem (Entscheidung Markus, 22.11.2026). Rate-Limit (10 s je IP, 200 am Tag) ist schon drin.
+- [x] PDF: Beispielpositionen nicht mitdrucken, Maßtexte größer, Summen nicht allein auf Seite 2, netto und brutto zeigen, Firmenfuß (Firmendaten aus dem Impressum von agro-flor.com).
 
 ## Aus dem easy2cover-Vergleich ([docs/vergleich-easy2cover.md](docs/vergleich-easy2cover.md))
 

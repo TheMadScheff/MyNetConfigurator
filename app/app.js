@@ -240,7 +240,7 @@
   function buildPreview(d, o) {
     const errors = o.errors || [];
     const narrow = !!o.narrow;
-    const VW = narrow ? 400 : 720, VH = narrow ? 320 : 430;
+    const VW = o.vw || (narrow ? 400 : 720), VH = o.vh || (narrow ? 320 : 430);
     const M = { t: 34, r: 78, b: 64, l: 34 };
     const W = Number.isFinite(d.widthCm) && d.widthCm > 0 ? d.widthCm : 100;
     const H = Number.isFinite(d.heightCm) && d.heightCm > 0 ? d.heightCm : 100;
@@ -564,25 +564,27 @@
 
   async function exportPdf() {
     const btn = $('pdf-btn'), status = $('pdf-status');
-    if (!state.positions.length) { status.textContent = 'Noch keine Positionen zum Exportieren.'; status.classList.add('is-error'); return; }
+    const own = state.positions.filter((p) => !p.example);   // Beispielpositionen werden nicht gedruckt
+    if (!own.length) { status.textContent = 'Bitte zuerst eigene Positionen anlegen. Die Beispiele werden nicht exportiert.'; status.classList.add('is-error'); return; }
     btn.disabled = true;
     status.classList.remove('is-error');
     status.textContent = 'PDF wird erstellt …';
     try {
-      const order = P.priceOrder(cat, state.positions, state.rules);
+      const order = P.priceOrder(cat, own, state.rules);
       const items = order.lines.map(({ position: p, price: r }, i) => {
         const m = P.findMaterial(cat, p.material);
         const color = m.colors.find((c) => c.code === p.color);
-        const svgEl = buildPreview(p, { narrow: false, errors: [], interactive: false });
+        const svgEl = buildPreview(p, { vw: 480, vh: 300, errors: [], interactive: false });
         return {
           nr: i + 1, title: p.name || m.name, svg: svgEl,
           material: m.name, color: colorName(p.color), sku: color && color.sku ? color.sku : '',
           widthCm: p.widthCm, heightCm: p.heightCm, areaM2: r.areaM2, quantity: p.quantity,
           edges: cat.sides.map((sd) => [sd.label, edgeShort(p.edges[sd.code])]),
-          eyelets: r.eyeletCount, unitGross: r.unitGross, lineGross: r.lineGross,
+          eyelets: r.eyeletCount, unitNet: r.unitNet, unitGross: r.unitGross,
+          lineNet: P.round2(r.lineGross / (1 + cat.vatRate)), lineGross: r.lineGross,
         };
       });
-      const pieces = state.positions.reduce((a, p) => a + p.quantity, 0);
+      const pieces = own.reduce((a, p) => a + p.quantity, 0);
       const pdf = await window.NetPdf.create({
         title: 'Angebotsanfrage', items,
         totals: { areaM2: order.totalAreaM2, pieces, weightKg: order.weightKg, net: order.totalNet, vat: order.vat, gross: order.totalGross },

@@ -16,7 +16,7 @@
     clone.setAttribute('width', w);
     clone.setAttribute('height', h);
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = '.dimtext{font:500 13px Arial,Helvetica,sans-serif;fill:#242424}.dimline{stroke:#6e6e6e;stroke-width:1}.edge-tag{font:500 11px Arial,Helvetica,sans-serif;fill:#6e6e6e}';
+    style.textContent = '.dimtext{font:600 16px Arial,Helvetica,sans-serif;fill:#242424}.dimline{stroke:#6e6e6e;stroke-width:1.2}.edge-tag{font:500 12.5px Arial,Helvetica,sans-serif;fill:#555}';
     clone.insertBefore(style, clone.firstChild);
     const xml = vars(new XMLSerializer().serializeToString(clone));
     return new Promise((resolve, reject) => {
@@ -52,7 +52,7 @@
   async function create(data) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    const PW = 210, PH = 297, ML = 15, MR = 15, MT = 15, MB = 22;
+    const PW = 210, PH = 297, ML = 15, MR = 15, MT = 15, MB = 28;
     const INK = [36, 36, 36], MUTED = [110, 110, 110], GREEN = [38, 90, 15], LINE = [225, 227, 220];
     const setText = (rgb) => doc.setTextColor(rgb[0], rgb[1], rgb[2]);
 
@@ -68,12 +68,14 @@
     let y = MT + 28;
 
     // Konfigurationen
-    const IMG_W = 84, TX = ML + IMG_W + 6, TW = PW - MR - TX;
+    const TOTALS_H = 44, IMG_W = 95, TX = ML + IMG_W + 6, TW = PW - MR - TX;
     data.items.forEach((it, i) => {
       const shot = shots[i];
       const imgH = IMG_W * shot.h / shot.w;
       const blockH = imgH + 8;
-      if (y + blockH > PH - MB) { doc.addPage(); y = MT; }
+      // Die letzte Position wandert mit den Summen auf eine neue Seite, damit die Summen nie allein stehen.
+      const needed = blockH + (i === data.items.length - 1 ? TOTALS_H : 0);
+      if (y + needed > PH - MB) { doc.addPage(); y = MT; }
 
       doc.addImage(shot.url, 'JPEG', ML, y, IMG_W, imgH);
       doc.setDrawColor(...LINE); doc.rect(ML, y, IMG_W, imgH);
@@ -95,8 +97,9 @@
       else { line('Kanten:', { gap: 0 }); for (const [side, e] of it.edges) line('   ' + side + ': ' + e, { color: MUTED, gap: 0 }); ty += 0.8; }
       if (it.eyelets) line('Ösen: ' + it.eyelets);
       ty += 1.5;
-      line('Einzelpreis brutto: ' + eur(it.unitGross), { color: MUTED });
-      line('Summe brutto: ' + eur(it.lineGross), { bold: true, size: 11 });
+      line('Einzelpreis: ' + eur(it.unitNet) + ' netto · ' + eur(it.unitGross) + ' brutto', { color: MUTED });
+      line('Summe: ' + eur(it.lineNet) + ' netto', { gap: 0.2 });
+      line(eur(it.lineGross) + ' brutto', { bold: true, size: 11 });
 
       y += Math.max(imgH, ty - y) + 6;
       if (i < data.items.length - 1) { doc.setDrawColor(...LINE); doc.line(ML, y - 3, PW - MR, y - 3); }
@@ -109,7 +112,7 @@
       ['Netto', eur(data.totals.net)],
       ['MwSt. ' + data.vatPct + ' %', eur(data.totals.vat)],
     ];
-    if (y + 12 + rows.length * 6 + 10 > PH - MB) { doc.addPage(); y = MT; }
+    if (y + TOTALS_H - 10 > PH - MB) { doc.addPage(); y = MT; }
     y += 2;
     const X1 = 120, X2 = PW - MR;
     doc.setFontSize(10);
@@ -126,8 +129,13 @@
     for (let p = 1; p <= pages; p++) {
       doc.setPage(p);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8); setText(MUTED);
-      doc.text('Beispielsortiment und -preise, inkl. ' + data.vatPct + ' % MwSt., zzgl. Versand, unverbindlich.', ML, PH - 12);
-      doc.text('Seite ' + p + ' von ' + pages, PW - MR, PH - 12, { align: 'right' });
+      doc.setDrawColor(...LINE); doc.line(ML, PH - 22, PW - MR, PH - 22);
+      doc.setFont('helvetica', 'bold'); setText(INK);
+      doc.text('Agroflor Kunststoff GmbH', ML, PH - 17);
+      doc.setFont('helvetica', 'normal'); setText(MUTED);
+      doc.text('Fattweg 6 · A-6922 Wolfurt · Tel. +43 5576 25313 · office@agroflor.at · www.agro-flor.com', ML, PH - 13);
+      doc.text('Beispielsortiment und -preise, inkl. ' + data.vatPct + ' % MwSt., zzgl. Versand, unverbindlich.', ML, PH - 9);
+      doc.text('Seite ' + p + ' von ' + pages, PW - MR, PH - 9, { align: 'right' });
     }
 
     doc.setProperties({ title: data.title });
