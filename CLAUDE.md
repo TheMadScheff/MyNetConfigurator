@@ -1,0 +1,39 @@
+# MyNetConfigurator
+
+Produktkonfigurator für Sichtschutz-Gaze und Netze nach Maß (Prototyp, Phase 2: Ergebnisse in Odoo speichern). Statisch, ohne Build und ohne Abhängigkeiten. Details in `README.md`.
+
+## Struktur
+- `app/` – Demo: `index.html`, `app.js` (Bedienung, SVG-Vorschau), `catalog.js` (Produktdaten), `pricing.js` (reine Preis-/Geometrielogik ohne DOM), `styles.css`
+- `tests/pricing.test.js` – prüft die Preislogik gegen gemessene Shop-Preise
+- `docs/` – Analysen, `stilrichtlinien-agroflor.md`
+- `scripts/build-artifact.sh` – baut die Online-Vorschau nach `dist/`
+- `scripts/deploy.sh` – FTP-Upload (siehe unten)
+
+## Befehle
+- Lokal starten: `cd app && python3 -m http.server 8765`
+- Tests: `node --test tests/*.test.js`
+
+## Deployment (FTP)
+- `scripts/deploy.sh` führt Tests und Probelauf aus, `scripts/deploy.sh --go` lädt `app/` nach `https://scheffknecht.net/agroflor/` hoch.
+- Es nutzt den globalen Skill `ftp-upload` (`~/.claude/skills/ftp-upload/scripts/ftp.sh`), Profil `scheffknecht`, Unterordner `agroflor` (überschreibbar mit `FTP_PROFILE`, `FTP_SUBDIR`).
+- Upload überschreibt gleichnamige Dateien und löscht nichts. Vor `--go` Probelauf zeigen und bestätigen lassen.
+- Passwörter liegen im macOS-Schlüsselbund. Nie selbst auslesen oder in Dateien schreiben. Fehlt ein Profil, `~/.claude/skills/ftp-upload/scripts/setup.sh` vom Benutzer in einem eigenen Terminal ausführen lassen.
+- Das ältere `scripts/deploy-ftp.sh` (lftp, Passwort in `.env.deploy`) bleibt vorerst bestehen, wird aber nicht benutzt.
+
+## PDF-Export
+- Button „Als PDF exportieren“ (ersetzt JSON-Export/-Import) → `app/pdf.js` (`NetPdf.create`) mit jsPDF 4.2.1 aus `app/vendor/` (MIT, ohne CDN).
+- Je Position ein Vorschau-Bild (`buildPreview` in `app.js`, als JPEG gerendert) plus Daten, am Ende die Summen. Titel: „Angebotsanfrage“.
+- `P.exportOrder` in `pricing.js` bleibt für Odoo (Phase 2) und das Kontaktformular bestehen.
+
+## Kontaktformular
+- `app/contact.js` (Frontend) → `app/kontakt.php` (PHP, `mail()`), Positionen kommen über `window.NetConfigurator.getOrder()` aus `app.js`.
+- Empfänger und Absender stehen in `app/kontakt.config.php` (in `.gitignore`, weil das Repo öffentlich ist). Vorlage: `kontakt.config.example.php`. Die Adresse trägt der Benutzer selbst ein; `deploy.sh` lädt die Datei mit hoch.
+- Lokal testen mit `'dry_run' => true` in der Config: schreibt `kontakt.dry-run.txt` statt zu senden.
+
+## Materialbilder (derzeit deaktiviert)
+- Die Fotos stammen von allbuyone.com, die Rechte sind ungeklärt. Bis der Benutzer das bestätigt, sind sie aus der Demo entfernt: Dateien liegen in `_zurueckgehalten/materialbilder/` (in `.gitignore`, nie committen oder hochladen), `catalog.js` hat keine `image`-Einträge.
+- Wieder aktivieren: Dateien nach `app/img/materials/<MATERIAL_CODE>.webp` und je Material `image: 'img/materials/<CODE>.webp'` in `catalog.js` (`app.js` zeigt das Bild dann in der Karte; fehlt die Datei, bleibt die Karte ohne Bild).
+
+## Konventionen
+- Sprache der Kommunikation und der UI-Texte: Deutsch.
+- Branch `feature/prototyp` (PR #2), Remote `origin` = TheMadScheff/MyNetConfigurator.

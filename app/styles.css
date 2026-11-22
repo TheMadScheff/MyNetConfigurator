@@ -55,10 +55,26 @@ button, input, select, textarea { font: inherit; color: inherit; }
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem;
 }
-.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .6rem; }
-.brand__name { font: 700 1.6rem/1 var(--font-display); }
+.brand { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .9rem; }
+.brand__logo { display: block; background: #fff; padding: .35rem .6rem; border-radius: 4px; line-height: 0; }
+.brand__logo img { display: block; height: 32px; width: auto; max-width: 100%; }
+.brand__name { font: 600 1.25rem/1 var(--font-display); }
 .brand__tag { font: 400 .85rem/1 var(--font-body); opacity: .75; }
 .topbar__note { margin: 0; font-size: .82rem; opacity: .75; }
+
+/* Fußzeile */
+.sitefooter { background: #191919; color: #d6d6d6; margin-top: 2rem; }
+.sitefooter__inner {
+  max-width: 1280px; margin: 0 auto; padding-block: 1.25rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1.5rem;
+  font-size: .85rem;
+}
+.sitefooter p { margin: 0; }
+.sitefooter nav { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
+.sitefooter a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.sitefooter a:focus-visible { outline-color: #fff; }
 
 /* Raster */
 .layout {
@@ -68,15 +84,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: grid; gap: 1.25rem;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "stage" "config" "order";
+  grid-template-areas: "stage" "config" "order" "contact";
 }
 .config { grid-area: config; min-width: 0; }
 .stage { grid-area: stage; min-width: 0; }
 .order { grid-area: order; min-width: 0; }
+.contact { grid-area: contact; min-width: 0; }
 @media (min-width: 960px) {
   .layout {
     grid-template-columns: minmax(360px, 440px) minmax(0, 1fr);
-    grid-template-areas: "config stage" "order order";
+    grid-template-areas: "config stage" "order order" "contact contact";
     padding-bottom: 2rem;
   }
   .stage__sticky { position: sticky; top: 1rem; }
@@ -106,6 +123,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .mat:hover { border-color: var(--muted); }
 .mat[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--surface); }
+.mat__img { display: block; aspect-ratio: 3 / 2; margin: -.6rem -.7rem .1rem; overflow: hidden; border-radius: var(--r) var(--r) 0 0; background: var(--surface-2); }
+.mat__img svg, .mat__img img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .mat__name { font: 600 .98rem/1.2 var(--font-display); color: var(--ink); }
 .mat__specs { font: 400 .75rem/1.35 var(--font-data); color: var(--muted); }
 .mat__price { font: 500 .85rem var(--font-body); }
@@ -222,7 +241,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .order { background: var(--surface); border: 0; box-shadow: var(--shadow); border-radius: var(--r); padding: 1rem; }
 .order__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; }
 .order__title { margin: 0; font: 500 1.375rem/1.2 var(--font-display); color: var(--ink); text-wrap: balance; }
-.order__tools { display: flex; gap: .5rem; flex-wrap: wrap; }
+.order__tools { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
 .positions { margin-top: .75rem; display: grid; gap: .5rem; }
 .pos {
   display: grid; gap: .25rem .75rem; align-items: center;
@@ -252,15 +271,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .totals .grand { font: 600 1.4rem/1.1 var(--font-display); color: var(--ink); }
 .totals dt.grand { font-size: 1rem; align-self: end; }
 
-.panel { margin-top: 1rem; border: 1px solid var(--line); border-radius: var(--r); padding: .9rem; background: var(--surface-2); }
-.panel__head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
-.panel__head .link-btn { margin: 0; }
-.panel__title { margin: 0; font: 600 1rem var(--font-display); }
-.panel textarea {
-  width: 100%; margin-top: .6rem; padding: .6rem; border: 1px solid var(--line); border-radius: var(--r);
-  background: var(--surface); font: .78rem/1.45 var(--font-code); resize: vertical;
-}
-.panel__actions { display: flex; align-items: center; gap: .75rem; margin-top: .5rem; flex-wrap: wrap; }
 .panel__status { font-size: .85rem; color: var(--ok); }
 .panel__status.is-error { color: var(--error); }
 
@@ -290,3 +300,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: no-preference) {
   .mat, .swatch, .btn, .chip { transition: border-color .15s, background-color .15s, box-shadow .15s; }
 }
+
+/* Platz für die feste Preisleiste am Handy */
+@media (max-width: 959px) { .sitefooter { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); } }
+
+/* Kontaktformular */
+.contact { border-top: 1px solid var(--line); padding-top: 1.25rem; }
+.contact__form { display: grid; gap: .75rem 1rem; grid-template-columns: minmax(0, 1fr); margin-top: .75rem; max-width: 760px; }
+@media (min-width: 640px) { .contact__form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .contact__wide { grid-column: 1 / -1; } }
+.contact__form textarea { border: 0; background: transparent; padding: .55rem .65rem; width: 100%; min-width: 0; outline: none; resize: vertical; font: .95rem/1.5 var(--font-body); }
+.contact__hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.check { display: flex; gap: .6rem; align-items: flex-start; font-size: .88rem; line-height: 1.45; }
+.check input { margin-top: .2rem; accent-color: var(--accent); }
+.check a { color: var(--accent); }
+.contact__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.contact__actions .btn:disabled { opacity: .55; cursor: wait; }

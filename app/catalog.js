@@ -2,16 +2,19 @@
  * Produktkatalog Gaze nach Maß.
  * Quelle: allbuyone.com Gaze-Konfigurator, Stand 22.11.2026 (siehe docs/analyse-konfiguratoren.md).
  *
- * Preise sind NETTO je m² (wie in Odoo üblich). Der Shop zeigt brutto inkl. 19 % MwSt.
+ * Preise sind NETTO je m² (wie in Odoo üblich). Der Shop (Deutschland) zeigt brutto inkl. 19 % MwSt.,
+ * der Prototyp rechnet mit dem österreichischen Satz von 20 % (vatRate unten).
  * Für Gaze 203 B1 sind die Nettopreise aus Testkonfigurationen exakt zurückgerechnet,
- * für die übrigen Typen aus den angezeigten Bruttopreisen (brutto / 1,19).
+ * für die übrigen Typen aus den angezeigten Bruttopreisen (brutto / 1,19, Netto bleibt unverändert).
+ *
+ * Artikelnummern (sku) sind ausgedachte Demo-Nummern (DEMO-<Typ>-<Farbe>), keine echten Nummern.
  *
  * Alle Codes sind stabile Schlüssel und werden 1:1 in den Export (JSON) und später nach Odoo übernommen.
  */
 (function (root) {
   const catalog = {
     currency: 'EUR',
-    vatRate: 0.19,
+    vatRate: 0.20,
 
     materials: [
       {
@@ -19,8 +22,8 @@
         weightGm2: 125, windPermeabilityPct: 50, fireClass: 'B1', uvYears: '1–2', material: 'HDPE',
         openness: 0.5,
         colors: [
-          { code: 'SCHWARZ', sku: '2513059' },
-          { code: 'WEISS', sku: '2513060' },
+          { code: 'SCHWARZ', sku: 'DEMO-201-SW' },
+          { code: 'WEISS', sku: 'DEMO-201-WS' },
         ],
         tiers: [
           { fromM2: 0, netPerM2: 11.916 },
@@ -33,8 +36,8 @@
         weightGm2: 140, windPermeabilityPct: 37, fireClass: 'B1', uvYears: '1–2', material: 'HDPE',
         openness: 0.37,
         colors: [
-          { code: 'SCHWARZ', sku: '2513061' },
-          { code: 'WEISS', sku: '2513062' },
+          { code: 'SCHWARZ', sku: 'DEMO-202-SW' },
+          { code: 'WEISS', sku: 'DEMO-202-WS' },
         ],
         tiers: [
           { fromM2: 0, netPerM2: 12.1681 },
@@ -47,8 +50,8 @@
         weightGm2: 160, windPermeabilityPct: 27, fireClass: 'B1', uvYears: '1–2', material: 'HDPE',
         openness: 0.27,
         colors: [
-          { code: 'SCHWARZ', sku: '2513012' },
-          { code: 'WEISS', sku: '2513086' },
+          { code: 'SCHWARZ', sku: 'DEMO-203-SW' },
+          { code: 'WEISS', sku: 'DEMO-203-WS' },
         ],
         tiers: [
           { fromM2: 0, netPerM2: 13.2 },
@@ -61,9 +64,9 @@
         weightGm2: 200, windPermeabilityPct: 20, fireClass: 'B1', uvYears: '1–2', material: 'HDPE',
         openness: 0.2,
         colors: [
-          { code: 'SCHWARZ', sku: '2513064' },
-          { code: 'WEISS', sku: '2513065' },
-          { code: 'GRAU', sku: '2513066' },
+          { code: 'SCHWARZ', sku: 'DEMO-800-SW' },
+          { code: 'WEISS', sku: 'DEMO-800-WS' },
+          { code: 'GRAU', sku: 'DEMO-800-GR' },
           { code: 'ROT', sku: null },
           { code: 'GRUEN', sku: null },
           { code: 'BLAU', sku: null },
@@ -83,9 +86,9 @@
         weightGm2: 200, windPermeabilityPct: 20, fireClass: null, uvYears: '5–7', material: 'HDPE',
         openness: 0.2,
         colors: [
-          { code: 'SCHWARZ', sku: '2513073' },
-          { code: 'WEISS', sku: '2513074' },
-          { code: 'GRAU', sku: '2513075' },
+          { code: 'SCHWARZ', sku: 'DEMO-800UV-SW' },
+          { code: 'WEISS', sku: 'DEMO-800UV-WS' },
+          { code: 'GRAU', sku: 'DEMO-800UV-GR' },
         ],
         tiers: [
           { fromM2: 0, netPerM2: 13.3697 },
@@ -99,8 +102,8 @@
         weightGm2: 250, windPermeabilityPct: 16, fireClass: 'B1', uvYears: '1–2', material: 'HDPE',
         openness: 0.16,
         colors: [
-          { code: 'SCHWARZ', sku: '2513057' },
-          { code: 'WEISS', sku: '2513058' },
+          { code: 'SCHWARZ', sku: 'DEMO-100-SW' },
+          { code: 'WEISS', sku: 'DEMO-100-WS' },
         ],
         tiers: [
           { fromM2: 0, netPerM2: 14.1429 },

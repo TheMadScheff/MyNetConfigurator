@@ -14,10 +14,11 @@
 <header class="topbar">
   <div class="topbar__inner">
     <div class="brand">
+      <a class="brand__logo" href="https://agro-flor.com/" aria-label="Agroflor, zur Website"><img src="logo.jpg" width="260" height="40" alt="Agroflor"></a>
       <span class="brand__name">Netze nach Maß</span>
       <span class="brand__tag">Konfigurator · Prototyp</span>
     </div>
-    <p class="topbar__note">Beispielsortiment und -preise, inkl. 19 % MwSt., zzgl. Versand</p>
+    <p class="topbar__note" id="vat-note">Beispielsortiment und -preise, inkl. 20 % MwSt., zzgl. Versand</p>
   </div>
 </header>
 
@@ -108,25 +109,12 @@
     <div class="order__head">
       <h2 class="order__title">Ihre Positionen</h2>
       <div class="order__tools">
-        <button type="button" id="export-btn" class="btn btn--ghost">Export (JSON)</button>
-        <button type="button" id="import-btn" class="btn btn--ghost">Import</button>
+        <span class="panel__status" id="pdf-status" role="status"></span>
+        <button type="button" id="pdf-btn" class="btn btn--ghost">Als PDF exportieren</button>
       </div>
     </div>
     <div id="positions" class="positions"></div>
     <dl class="totals" id="totals"></dl>
-
-    <div class="panel" id="io-panel" hidden>
-      <div class="panel__head">
-        <h3 class="panel__title" id="io-title">Export</h3>
-        <button type="button" class="link-btn" id="io-close">Schließen</button>
-      </div>
-      <p class="hint" id="io-hint"></p>
-      <textarea id="io-text" rows="12" spellcheck="false" aria-labelledby="io-title"></textarea>
-      <div class="panel__actions">
-        <button type="button" class="btn btn--primary" id="io-action">Kopieren</button>
-        <span class="panel__status" id="io-status" role="status"></span>
-      </div>
-    </div>
 
     <details class="rules" id="rules">
       <summary>Preisregeln (zum Ausprobieren)</summary>
@@ -148,15 +136,54 @@
       </div>
     </details>
   </section>
+  <section class="contact" id="kontakt" aria-labelledby="contact-title">
+    <h2 class="order__title" id="contact-title">Anfrage senden</h2>
+    <p class="hint">Schreiben Sie uns, wir melden uns bei Ihnen. Auf Wunsch senden wir Ihre Positionen mit.</p>
+    <form id="contact-form" class="contact__form" novalidate>
+      <label class="field" for="c-name"><span class="field__label">Name</span>
+        <span class="field__control"><input id="c-name" name="name" type="text" autocomplete="name" maxlength="100" required></span>
+        <span class="field__error" id="c-name-error"></span></label>
+      <label class="field" for="c-email"><span class="field__label">E-Mail</span>
+        <span class="field__control"><input id="c-email" name="email" type="email" autocomplete="email" maxlength="200" required></span>
+        <span class="field__error" id="c-email-error"></span></label>
+      <label class="field" for="c-phone"><span class="field__label">Telefon (optional)</span>
+        <span class="field__control"><input id="c-phone" name="phone" type="tel" autocomplete="tel" maxlength="50"></span></label>
+      <label class="field contact__wide" for="c-message"><span class="field__label">Nachricht</span>
+        <span class="field__control"><textarea id="c-message" name="message" rows="5" maxlength="5000" required></textarea></span>
+        <span class="field__error" id="c-message-error"></span></label>
+      <div class="contact__hp" aria-hidden="true"><label>Website <input type="text" id="c-website" name="website" tabindex="-1" autocomplete="off"></label></div>
+      <label class="check contact__wide"><input type="checkbox" id="c-order"> <span id="c-order-label">Meine Positionen mitsenden</span></label>
+      <label class="check contact__wide"><input type="checkbox" id="c-consent" required> <span>Ich stimme zu, dass meine Angaben zur Bearbeitung der Anfrage verarbeitet werden. Details in der <a href="https://www.agro-flor.com/datenschutz" rel="noopener">Datenschutzerklärung</a>.</span></label>
+      <span class="field__error contact__wide" id="c-consent-error"></span>
+      <div class="contact__actions contact__wide">
+        <button type="submit" class="btn btn--primary" id="c-send">Anfrage senden</button>
+        <span class="panel__status" id="c-status" role="status"></span>
+      </div>
+    </form>
+  </section>
 </main>
+
+<footer class="sitefooter">
+  <div class="sitefooter__inner">
+    <p>Prototyp zur Ansicht. Beispielsortiment und -preise, unverbindlich.</p>
+    <nav aria-label="Rechtliches">
+      <a href="https://agro-flor.com/" rel="noopener">agro-flor.com</a>
+      <a href="https://www.agro-flor.com/impressum" rel="noopener">Impressum</a>
+      <a href="https://www.agro-flor.com/datenschutz" rel="noopener">Datenschutz</a>
+    </nav>
+  </div>
+</footer>
 
 <div class="mobilebar" id="mobilebar">
   <div class="mobilebar__price"><span id="mb-price">–</span><small id="mb-sub"></small></div>
   <button type="button" id="mb-add" class="btn btn--primary">Hinzufügen</button>
 </div>
 
+<script src="vendor/jspdf.umd.min.js"></script>
 <script src="catalog.js"></script>
 <script src="pricing.js"></script>
+<script src="pdf.js"></script>
 <script src="app.js"></script>
+<script src="contact.js"></script>
 </body>
 </html>

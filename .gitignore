@@ -1,2 +1,7 @@
 dist/
 .env.deploy
+.DS_Store
+app/kontakt.config.php
+app/kontakt.dry-run.txt
+app/angebote/
+_zurueckgehalten/

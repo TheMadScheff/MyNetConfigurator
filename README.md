@@ -35,7 +35,7 @@ Die Tests prüfen u. a. acht Preise, die am 22.11.2026 im allbuyone-Konfigurator
 ```
 fläche_m2    = breite_cm × höhe_cm / 10 000
 stück_netto  = fläche_m2 × Staffelpreis(gaze, staffelfläche) + Kantenaufpreise + Zubehör
-stück_brutto = rund2(stück_netto × 1,19)
+stück_brutto = rund2(stück_netto × 1,20)   # MwSt. Österreich, 20 %
 position     = stück_brutto × menge
 ```
 

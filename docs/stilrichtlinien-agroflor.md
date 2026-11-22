@@ -33,6 +33,6 @@ Die Seite ist immer hell mit weißem Hintergrund, wie agro-flor.com, auch wenn d
 - Karten: weiß, eckig mit weichem Schatten, Bilder ohne Rundung.
 - Viel Weißraum, keine Versalien in Überschriften.
 
-## Bewusst nicht übernommen
+## Logo und Fußzeile
 
-Logo und Firmenname stehen nicht in der Online-Vorschau, damit die private Vorschau nicht wie eine offizielle Agroflor-Seite wirkt. Das Logo lässt sich für eine Präsentation in `app/index.html` im Kopf einsetzen.
+Auf Wunsch (22.11.2026) steht das Logo von agro-flor.com (`app/logo.jpg`, 260 × 40, weißer Hintergrund) im Kopf, in einer weißen Fläche auf der dunkelgrünen Leiste. Die Fußzeile ist dunkel (`#191919`) mit dem Hinweis „Prototyp“ und Links zu agro-flor.com, Impressum und Datenschutz.

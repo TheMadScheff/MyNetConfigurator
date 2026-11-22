@@ -5,6 +5,7 @@
   const P = window.NetPricing;
   const STORE_KEY = 'netcfg.v1';
 
+  const vatPct = Math.round(cat.vatRate * 100);
   const eur = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
   const num = (n, d = 2) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }).format(n);
   const int = (n) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(n);
@@ -91,6 +92,33 @@
   }
 
   // ---------- Formular ----------
+  /** Schemabild eines Gewebes: Maschenweite und Dichte nach Katalogdaten, Farbe = gewählte Farbe (sonst erste Farbe des Gewebes). */
+  function schemeSvg(m) {
+    const code = m.colors.some((c) => c.code === state.draft.color) ? state.draft.color : m.colors[0].code;
+    const hex = colorHex(code);
+    const light = luminance(hex) > 0.75;
+    const thread = light ? shade(hex, 0.8) : shade(hex, 1.35);
+    const cell = 4 + m.openness * 16;
+    const id = 'sch-' + m.code;
+    return svg('svg', { class: 'mat__scheme', viewBox: '0 0 120 80', 'aria-hidden': 'true', focusable: 'false' }, [
+      svg('defs', {}, svg('pattern', { id, width: cell, height: cell, patternUnits: 'userSpaceOnUse' }, [
+        svg('rect', { width: cell, height: cell, fill: hex, 'fill-opacity': (0.95 - m.openness).toFixed(2) }),
+        svg('path', { d: `M0 0H${cell}M0 0V${cell}`, stroke: thread, 'stroke-width': 1.3, fill: 'none' }),
+      ])),
+      svg('rect', { width: 120, height: 80, fill: 'var(--surface-2)' }),
+      svg('rect', { x: 10, y: 8, width: 100, height: 64, fill: `url(#${id})`, stroke: 'var(--muted)', 'stroke-opacity': 0.4 }),
+      svg('text', { x: 114, y: 76, 'text-anchor': 'end', class: 'edge-tag', style: 'font-size:6px' }, 'Schema'),
+    ]);
+  }
+  /** Schemabilder an die gewählte Farbe anpassen, ohne die Karten neu aufzubauen. */
+  function refreshSchemes() {
+    document.querySelectorAll('#materials .mat__img').forEach((box) => {
+      if (box.querySelector('img')) return;
+      const m = P.findMaterial(cat, box.dataset.mat);
+      if (m) box.replaceChildren(schemeSvg(m));
+    });
+  }
+
   function renderMaterials() {
     const box = $('materials');
     box.replaceChildren();
@@ -104,6 +132,9 @@
         onclick: () => setMaterial(m.code),
         onkeydown: (ev) => radioKeys(ev, box),
       }, [
+        el('span', { class: 'mat__img', 'data-mat': m.code }, m.image
+          ? el('img', { src: m.image, alt: '', loading: 'lazy', width: 300, height: 200, onerror: (ev) => ev.target.replaceWith(schemeSvg(m)) })
+          : schemeSvg(m)),
         el('span', { class: 'mat__name', text: m.name }),
         el('span', { class: 'mat__badges' }, [
           m.fireClass ? el('span', { class: 'badge badge--b1', text: m.fireClass + ' schwer entflammbar' }) : null,
@@ -205,10 +236,10 @@
     return e;
   };
 
-  function renderPreview(errors) {
-    const d = state.draft;
-    const host = $('preview');
-    const narrow = host.clientWidth > 0 && host.clientWidth < 560;
+  /** Baut die SVG-Vorschau für eine Konfiguration. o.interactive: klickbare Kanten (Bildschirm), sonst statisch (PDF). */
+  function buildPreview(d, o) {
+    const errors = o.errors || [];
+    const narrow = !!o.narrow;
     const VW = narrow ? 400 : 720, VH = narrow ? 320 : 430;
     const M = { t: 34, r: 78, b: 64, l: 34 };
     const W = Number.isFinite(d.widthCm) && d.widthCm > 0 ? d.widthCm : 100;
@@ -224,7 +255,7 @@
     const x0 = M.l + (availW - dw) / 2, y0 = M.t + (availH - dh) / 2, x1 = x0 + dw, y1 = y0 + dh;
     const sx = dw / W, sy = dh / H;
 
-    const m = mat();
+    const m = P.findMaterial(cat, d.material);
     const hex = colorHex(d.color);
     const light = luminance(hex) > 0.75;
     const thread = light ? shade(hex, 0.86) : hex;
@@ -317,23 +348,31 @@
       const g = sideGeom[s.code];
       const t = tagPos[s.code];
       const label = s.label + ': ' + edgeShort(d.edges[s.code]);
-      const hit = svg('g', {
+      const hit = svg('g', o.interactive ? {
         class: 'edge-hit' + (state.activeSide === s.code ? ' is-active' : ''), tabindex: 0, role: 'button',
         'aria-label': 'Kante ' + label + ' ändern', 'data-side': s.code,
-      }, [
+      } : { class: 'edge-hit' }, [
         svg('line', { class: 'edge-glow', x1: g.a[0], y1: g.a[1], x2: g.b[0], y2: g.b[1], stroke: 'transparent', 'stroke-width': 10, 'stroke-linecap': 'round' }),
         svg('text', { class: 'edge-tag', x: t.x, y: t.y, 'text-anchor': 'middle', 'dominant-baseline': 'central', transform: t.rot ? `rotate(${t.rot} ${t.x} ${t.y})` : null }, label),
       ]);
-      const act = () => setActiveSide(s.code, true);
-      hit.addEventListener('click', act);
-      hit.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); act(); } });
+      if (o.interactive) {
+        const act = () => setActiveSide(s.code, true);
+        hit.addEventListener('click', act);
+        hit.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); act(); } });
+      }
       root.append(hit);
     }
 
     if (squeezed) {
       root.append(svg('text', { x: 12, y: VH - 10, class: 'edge-tag' }, 'Darstellung gestaucht, Maße stimmen'));
     }
-    host.replaceChildren(root);
+    return root;
+  }
+
+  function renderPreview(errors) {
+    const host = $('preview');
+    const narrow = host.clientWidth > 0 && host.clientWidth < 560;
+    host.replaceChildren(buildPreview(state.draft, { narrow, errors, interactive: true }));
   }
 
   // ---------- Preis ----------
@@ -376,7 +415,7 @@
     }
     for (const a of r.accessoryLines) rows.push([a.name + ', ' + a.quantity + ' Stk', eur.format(a.net * vat)]);
     rows.push(['sep']);
-    rows.push(['Stückpreis inkl. 19 % MwSt.', eur.format(r.unitGross)]);
+    rows.push(['Stückpreis inkl. ' + vatPct + ' % MwSt.', eur.format(r.unitGross)]);
     rows.push(['davon MwSt.', eur.format(r.unitGross - r.unitGross / vat)]);
     $('breakdown').replaceChildren(...rows.flatMap(([k, v]) => k === 'sep' ? [el('div', { class: 'sep' })] : [el('dt', { text: k }), el('dd', { text: v })]));
 
@@ -454,7 +493,7 @@
       el('dt', { text: 'Fläche gesamt' }), el('dd', { text: num(order.totalAreaM2) + ' m² · ' + pieces + ' Stk' }),
       el('dt', { text: 'Versandgewicht' }), el('dd', { text: num(order.weightKg, 1) + ' kg' }),
       el('dt', { text: 'Netto' }), el('dd', { text: eur.format(order.totalNet) }),
-      el('dt', { text: 'MwSt. 19 %' }), el('dd', { text: eur.format(order.vat) }),
+      el('dt', { text: 'MwSt. ' + vatPct + ' %' }), el('dd', { text: eur.format(order.vat) }),
       el('dt', { class: 'grand', text: 'Gesamt' }), el('dd', { class: 'grand', text: eur.format(order.totalGross) }),
     );
   }
@@ -506,60 +545,57 @@
     update();
   }
 
-  // ---------- Export / Import ----------
-  function openPanel(mode) {
-    const panel = $('io-panel');
-    panel.hidden = false;
-    panel.dataset.mode = mode;
-    $('io-status').textContent = '';
-    $('io-status').classList.remove('is-error');
-    if (mode === 'export') {
-      $('io-title').textContent = 'Export';
-      $('io-hint').textContent = 'Alle Positionen mit Codes, Artikelnummern und Preisen. Dieses Format ist die Übergabe an Odoo in Phase 2.';
-      $('io-text').value = JSON.stringify(P.exportOrder(cat, state.positions, state.rules), null, 2);
-      $('io-text').readOnly = true;
-      $('io-action').textContent = 'Kopieren';
-    } else {
-      $('io-title').textContent = 'Import';
-      $('io-hint').textContent = 'Einen zuvor exportierten Auftrag einfügen. Die aktuellen Positionen werden ersetzt.';
-      $('io-text').value = '';
-      $('io-text').readOnly = false;
-      $('io-action').textContent = 'Positionen übernehmen';
+  // ---------- PDF-Export ----------
+  /** Legt das PDF auf dem Server ab (mit Zeitstempel) und löst dort die Mail an die Angebotsliste aus. */
+  async function saveOnServer(pdf, positions, gross) {
+    try {
+      const fd = new FormData();
+      fd.append('pdf', pdf.blob, pdf.filename);
+      fd.append('positions', String(positions));
+      fd.append('gross', String(gross));
+      const res = await fetch('angebot.php', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) return 'PDF erstellt und gespeichert' + (data.mailed ? ', Angebot wurde per E-Mail gemeldet.' : ' (E-Mail konnte nicht gesendet werden).');
+      return 'PDF erstellt, aber nicht auf dem Server gespeichert' + (data.error ? ': ' + data.error : '.');
+    } catch (e) {
+      return 'PDF erstellt, aber nicht auf dem Server gespeichert (keine Verbindung).';
     }
-    $('io-text').focus();
   }
 
-  function panelAction() {
-    const status = $('io-status');
+  async function exportPdf() {
+    const btn = $('pdf-btn'), status = $('pdf-status');
+    if (!state.positions.length) { status.textContent = 'Noch keine Positionen zum Exportieren.'; status.classList.add('is-error'); return; }
+    btn.disabled = true;
     status.classList.remove('is-error');
-    if ($('io-panel').dataset.mode === 'export') {
-      const text = $('io-text').value;
-      const done = () => { status.textContent = 'In die Zwischenablage kopiert.'; };
-      const fallback = () => { $('io-text').select(); status.textContent = 'Text ist markiert, bitte mit Strg+C bzw. ⌘C kopieren.'; };
-      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
-      return;
-    }
+    status.textContent = 'PDF wird erstellt …';
     try {
-      const data = JSON.parse($('io-text').value);
-      const list = (data.positions || []).map((p) => ({
-        id: uid(), name: p.name || '',
-        material: p.product ? p.product.material : p.material,
-        color: p.product ? p.product.color : p.color,
-        widthCm: p.dimensions ? p.dimensions.widthCm : p.widthCm,
-        heightCm: p.dimensions ? p.dimensions.heightCm : p.heightCm,
-        quantity: p.quantity, edges: p.edges,
-      }));
-      const bad = list.map((p, i) => [i + 1, P.validate(cat, p)]).filter(([, e]) => e.length);
-      if (!list.length) throw new Error('Keine Positionen gefunden.');
-      if (bad.length) throw new Error('Position ' + bad[0][0] + ': ' + bad[0][1][0].message);
-      state.positions = list;
-      if (data.rules) state.rules = Object.assign({}, P.DEFAULT_RULES, data.rules);
-      state.editingId = null;
-      save(); syncRules(); update();
-      status.textContent = list.length + ' Positionen übernommen.';
+      const order = P.priceOrder(cat, state.positions, state.rules);
+      const items = order.lines.map(({ position: p, price: r }, i) => {
+        const m = P.findMaterial(cat, p.material);
+        const color = m.colors.find((c) => c.code === p.color);
+        const svgEl = buildPreview(p, { narrow: false, errors: [], interactive: false });
+        return {
+          nr: i + 1, title: p.name || m.name, svg: svgEl,
+          material: m.name, color: colorName(p.color), sku: color && color.sku ? color.sku : '',
+          widthCm: p.widthCm, heightCm: p.heightCm, areaM2: r.areaM2, quantity: p.quantity,
+          edges: cat.sides.map((sd) => [sd.label, edgeShort(p.edges[sd.code])]),
+          eyelets: r.eyeletCount, unitGross: r.unitGross, lineGross: r.lineGross,
+        };
+      });
+      const pieces = state.positions.reduce((a, p) => a + p.quantity, 0);
+      const pdf = await window.NetPdf.create({
+        title: 'Angebotsanfrage', items,
+        totals: { areaM2: order.totalAreaM2, pieces, weightKg: order.weightKg, net: order.totalNet, vat: order.vat, gross: order.totalGross },
+        vatPct,
+      });
+      status.textContent = 'PDF erstellt, wird auf dem Server gespeichert …';
+      status.textContent = await saveOnServer(pdf, items.length, order.totalGross);
     } catch (e) {
+      console.error(e);
       status.classList.add('is-error');
-      status.textContent = e instanceof SyntaxError ? 'Das ist kein gültiges JSON.' : e.message;
+      status.textContent = 'Das PDF konnte nicht erstellt werden.';
+    } finally {
+      btn.disabled = false;
     }
   }
 
@@ -576,12 +612,22 @@
   function update() {
     const errors = P.validate(cat, state.draft);
     renderColors();
+    refreshSchemes();
     renderEdges();
     renderFieldErrors(errors);
     renderPreview(errors);
     renderPrice(errors);
     renderOrder();
+    document.dispatchEvent(new Event('netcfg:update'));
   }
+
+  // Schnittstelle für das Kontaktformular (contact.js): nur eigene Positionen, keine Beispiele.
+  window.NetConfigurator = {
+    getOrder() {
+      const own = state.positions.filter((p) => !p.example);
+      return own.length ? P.exportOrder(cat, own, state.rules) : null;
+    },
+  };
 
   function bind() {
     const onNum = (id, key) => {
@@ -606,10 +652,7 @@
     $('add-btn').addEventListener('click', commitDraft);
     $('mb-add').addEventListener('click', commitDraft);
     $('cancel-btn').addEventListener('click', cancelEdit);
-    $('export-btn').addEventListener('click', () => openPanel('export'));
-    $('import-btn').addEventListener('click', () => openPanel('import'));
-    $('io-close').addEventListener('click', () => { $('io-panel').hidden = true; });
-    $('io-action').addEventListener('click', panelAction);
+    $('pdf-btn').addEventListener('click', exportPdf);
     document.querySelectorAll('input[name="tierBasis"]').forEach((r) => r.addEventListener('change', () => { state.rules.tierBasis = r.value; save(); update(); }));
     document.querySelectorAll('input[name="edgePricing"]').forEach((r) => r.addEventListener('change', () => { state.rules.edgePricing = r.value; save(); update(); }));
     $('acc').addEventListener('change', (e) => { state.rules.accessories = e.target.checked; save(); update(); });
@@ -618,6 +661,7 @@
   let resizeTimer = null;
   window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => renderPreview(P.validate(cat, state.draft)), 120); });
 
+  $('vat-note').textContent = 'Beispielsortiment und -preise, inkl. ' + vatPct + ' % MwSt., zzgl. Versand';
   load();
   renderMaterials();
   syncInputs();

@@ -2,7 +2,9 @@
 // Ausführen: node --test tests/
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const cat = require('../app/catalog.js');
+const catAT = require('../app/catalog.js');
+// Die Messwerte stammen vom deutschen Shop (19 % MwSt.), die Netto-Logik prüfen wir damit weiter.
+const cat = Object.assign({}, catAT, { vatRate: 0.19 });
 const P = require('../app/pricing.js');
 
 const pos = (widthCm, heightCm, extra = {}) => Object.assign({
@@ -57,7 +59,18 @@ test('Ösen: 300 × 200 cm rundum alle 50 cm = 20 Ösen', () => {
 
 test('Export enthält Codes, SKU und Summen', () => {
   const ex = P.exportOrder(cat, [pos(300, 200, { name: 'Bauzaun Feld 1', quantity: 2 })]);
-  assert.equal(ex.positions[0].product.sku, '2513012');
+  assert.equal(ex.positions[0].product.sku, 'DEMO-203-SW');
   assert.equal(ex.positions[0].price.lineGross, 188.5);
   assert.equal(ex.totals.gross, 188.5);
+});
+
+test('Österreich: Katalog rechnet mit 20 % MwSt., Netto bleibt gleich', () => {
+  assert.equal(catAT.vatRate, 0.20);
+  const net = P.pricePosition(cat, pos(300, 200));
+  const at = P.pricePosition(catAT, pos(300, 200));
+  assert.equal(at.unitNet, net.unitNet);
+  assert.equal(at.unitGross, P.round2(net.unitNet * 1.2));
+  const order = P.priceOrder(catAT, [pos(300, 200, { quantity: 2 })]);
+  assert.equal(order.totalGross, P.round2(at.unitGross * 2));
+  assert.equal(P.round2(order.totalNet + order.vat), order.totalGross);
 });

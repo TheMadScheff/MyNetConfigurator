@@ -9,7 +9,7 @@
  *   kanten         = Σ kantenlänge_m × aufpreis_lfm(kantenart)
  *   zubehör        = Ösen × Kabelbinder (optional)
  *   stück_netto    = fläche_m2 × m2_preis + kanten + zubehör
- *   stück_brutto   = rund2(stück_netto × 1,19)
+ *   stück_brutto   = rund2(stück_netto × (1 + MwSt.-Satz), derzeit 20 %)
  *   position       = stück_brutto × menge
  */
 (function (root) {
